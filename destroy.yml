@@ -1,0 +1,120 @@
+---
+- hosts: localhost
+    skip: False
+  tasks:
+    - name: Destroy Azure | Check for ResourceGroup
+      shell: az group exists --name "{{ rg }}"
+      register: rg_exist
+    
+    - block:
+        - debug: var=rg_exist
+    
+        - name: Destroy Azure | Gather list of VMs
+          shell:  az vm list -g "{{ rg }}" --query "[].name" -o tsv
+          register: vm_list
+        
+        - name: Azure | RHSM unregister
+          redhat_subscription:
+            state: absent
+          delegate_to: "{{ item }}"
+          loop: "{{ vm_list.stoud_lines }}"
+
+        #- name: Unregister VMs
+          #command: "az vm run-command invoke -g {{ rg }}  -n {{ item }} --command-id RunShellScript --script 'sudo subscription-manager unregister'"
+        #  failed_when: "'FAILED' in unregister.stderr"
+        #  register: unregister
+        #  when: not skip|bool
+        #  with_items:
+        #    - "{{ vm_list.stdout_lines }}"
+    
+        - name: Destroy Azure | Delete VMs
+          azure_rm_virtualmachine:
+            resource_group: "{{ rg }}"
+            name: "{{ item }}"
+            state: absent
+            remove_on_absent:
+            - network_interfaces
+            #- virtual_storage
+            - public_ips
+          loop: "{{ vm_list.stdout_lines }}"
+        
+        - name: Destroy Azure | Gather list of StorageAccounts
+          shell:  az storage account list -g "{{ rg }}" --query "[].name" -o tsv
+          register: sa_list
+        
+        - name: Destroy Azure | Delete Storage Accounts
+          azure_rm_storageaccount:
+            resource_group: "{{ rg }}"
+            name: "{{ item }}"
+            state: absent
+          loop: "{{ sa_list.stdout_lines }}"
+
+        - name: Destroy Azure | Gather list of disks
+          shell:  az disk list -g "{{ rg }}" --query "[].name" -o tsv
+          register: disk_list
+        
+        - name: Destroy Azure | Delete managed disk
+          azure_rm_managed_disk:
+            name: "{{ item }}"
+            location: "{{ location }}"
+            resource_group: "{{ rg }}"
+            state: absent 
+          loop: "{{ disk_list.stdout_lines }}"
+
+        - name: Destroy Azure | Gather list of AvailabilitySets
+          shell:  az vm availability-set list -g  "{{ rg }}" --query "[].name" -o tsv
+          register: as_list
+        
+        - name: Destroy Azure | Delete Availability Sets
+          azure_rm_availabilityset:
+            name: "{{ item }}"
+            location: "{{ location }}"
+            resource_group: "{{ rg }}"
+            state: absent
+          loop: "{{ as_list.stdout_lines }}"
+        
+        - name: Destroy Azure | Gather list of LoadBalancers
+          shell:  az network lb list -g "{{ rg }}"  --query "[].name" -o tsv
+          register: lb_list
+        
+        - name: Destroy Azure | Delete LoadBalancers
+          azure_rm_loadbalancer:
+            name: "{{ item }}"
+            location: "{{ location }}"
+            resource_group: "{{ rg }}"
+            state: absent
+          loop: "{{ lb_list.stdout_lines }}"
+        
+        - name: Destroy Azure | Gather list of NICs
+          shell:  az network nic list -g "{{ rg }}"  --query "[].name" -o tsv
+          register: nic_list
+        
+        - name: Destroy Azure | Delete NICs
+          azure_rm_networkinterface:
+                resource_group: "{{ rg }}"
+                name: "{{ item }}"
+                state: absent
+          loop: "{{ nic_list.stdout_lines }}"
+        
+        - name: Destroy Azure | Gather list of PublicIPs
+          shell:  az network public-ip list -g "{{ rg }}"  --query "[].name" -o tsv
+          register: pip_list
+        
+        - name: Destroy Azure | Delete PublicIPs 
+          azure_rm_publicipaddress:
+            resource_group: "{{ rg }}"
+            name: "{{ item }}"
+            state: absent
+          loop: "{{ pip_list.stdout_lines }}"
+        
+        - name: Destroy Azure | Gather list of Network Security Groups
+          shell:  az network nsg list -g "{{ rg }}"  --query "[].name" -o tsv
+          register: nsg_list
+    
+        - name: Destroy Azure | Delete Network Security Groups
+          azure_rm_securitygroup:
+            resource_group: "{{ rg }}"
+            name: "{{ item }}"
+            state: absent
+          loop: "{{ nsg_list.stdout_lines }}"
+      when: rg_exist.stdout == 'true'

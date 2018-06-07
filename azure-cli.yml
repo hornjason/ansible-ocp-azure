@@ -1,0 +1,33 @@
+- name: Azure CLI | Pre-Reqs
+  hosts: localhost
+  tasks:
+    #- name: Enable a RHSM repository
+    #  rhsm_repository:
+      #    name: "{{ item }}"
+      #  state: enabled
+      #loop:
+        #  - rhel-7-server-ansible-2.5-rpms
+
+    - name: Import Microsft RPM key
+      rpm_key:
+        state: present
+        key: https://packages.microsoft.com/keys/microsoft.asc
+
+    - name: Check for exisiting Microsoft yum repo
+      stat:
+        path: /etc/yum.repos.d/azure-cli.repo
+      register: repo_check
+
+    - name: Install CLI yum repo
+      shell: sh -c 'echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/yumrepos/azure-cli\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
+      when: not repo_check.stat.exists
+
+    - name: Install Azure CLI
+      yum:
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - azure-cli
+        - ansible
+
+

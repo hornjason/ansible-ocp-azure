@@ -1,0 +1,108 @@
+---
+# defaults file for azure_infra
+state: present
+location: eastus
+rg: "test"
+
+#######################
+# nodes 
+#######################
+master_nodes: [1,2,3]
+infra_nodes:  [1,2,3]
+app_nodes:    [1,2,3]
+cns_nodes:    [1,2,3]
+
+#######################
+# SSH user for all VMs created
+#######################
+admin_user: cloud-user
+# This will be added to each instance's authorized_keys file
+admin_pubkey: 'ssh-rsa LDKJFDLKJDFLDKJDF'
+# Path for the private key which will be added to localhost ssh_config for proxying through the bastion
+admin_privkey: '~/.ssh/id_rsa'
+
+#######################
+# Service Principal 
+#######################
+sp_name: devops
+# Place this in vars file that can be encrypted in root of play and not checked into SCM
+sp_secret: 'P@ssw0rd1'
+  
+#######################
+# RHSM 
+# Username / Password or
+# Activation key / OrgId
+#######################
+rhsm_user: ''
+rhsm_pass: ''
+rhsm_key: ""
+rhsm_org: ""
+# Can specify separate pools so only Application nodes use paid subs
+# or keep the same if only using one pool
+rhsm_broker_pool: ""
+rhsm_node_pool: ""
+rhsm_repos: 
+  - rhel-7-server-rpms
+  - rhel-7-server-extras-rpms
+  - rhel-7-server-ose-3.9-rpms
+  - rhel-7-fast-datapath-rpms
+  - rhel-7-server-ansible-2.4-rpms
+bastion_pkgs:
+  - ansible
+  - atomic-openshift-utils
+  - git
+  - tmux
+  - screen
+
+#######################
+# Network
+#######################
+vnet_name: "{{ rg }}vnet"
+vnet_cidr: "10.0.0.0/16"
+
+api_port: 443
+
+#######################
+# LB
+#######################
+# Name of Master LB
+master_lb_public_ip: "masterExternalLB"
+masterlb_dns: "{{ rg }}"
+
+# Name of Router LB
+router_lb_public_ip: "routerExternalLB"
+#masterlb_dns: "{{ rg }}"
+# registry Storage Account Name
+registry_storage_account: "{{ rg | regex_replace('-') }}"
+
+#######################
+# OCP Identity
+# Use 'htpasswd -n <user>' to generate password hash. (htpasswd from httpd-tools RPM)
+#######################
+# Example with admin:redhat
+openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
+openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+
+# 
+#ocp_admin_passwd: 'redhat'
+
+#######################
+# deploy CNS
+#######################
+deploy_cns: true
+deploy_metrics: true
+deploy_logging: true
+deploy_prometheus: true
+
+# volume sizing defaults
+metrics_volume_size: '20Gi'
+logging_volume_size: '100Gi'
+prometheus_volume_size: '20Gi'
+
+
+#######################
+#######################
+# Don't change 
+#######################
+#######################
+bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"

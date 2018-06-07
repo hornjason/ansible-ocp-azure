@@ -12,9 +12,9 @@ admin_pubkey: ''
 admin_privkey: '~/.ssh/id_rsa'
 
 # Service Principal name
-sp_name: devspec-opc
+sp_name: ''
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
-sp_pass: ''
+sp_secret: ''
   
 #######################
 # RHSM 

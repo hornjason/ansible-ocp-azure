@@ -24,7 +24,6 @@
     path: /etc/origin/cloudprovider
     mode: 0660
   delegate_to: "{{ item }}"
-  #  loop: "{{groups['masters']}}"
 
 - name: template azure.conf
   template:
@@ -32,5 +31,3 @@
     dest: /etc/origin/cloudprovider/azure.conf
     backup: yes
   delegate_to: "{{ item }}"
-  #loop: "{{groups['masters']}}"
-

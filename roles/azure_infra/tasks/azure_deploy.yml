@@ -471,7 +471,7 @@
   --network-security-group cns-nsg \
   --internal-dns-name ocp-cns-{{ item }} \
   --public-ip-address '' "
-  loop: "{{ app_nodes }}"
+  loop: "{{ cns_nodes }}"
   register: nic
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
@@ -485,7 +485,6 @@
   --subnet ocp \
   --network-security-group bastion-nsg \
   --public-ip-address 'bastion-static' "
-  loop: "{{ infra_nodes }}"
   register: nic
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"

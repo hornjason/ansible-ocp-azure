@@ -7,14 +7,14 @@ rg: "jhorn-test"
 
 admin_user: cloud-user
 # This will be added to each instance's authorized_keys file
-admin_pubkey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzlRETx5/d/53o+hjWc+LKXhayVxhBYXoPUTQwBto2bX/JYaD9+Lxrq+2jxGngj6J96YcWfM4r9jm4ejBgC2gEnIJ60MQNEIlJIdVuBAY3y4Koi1dhrXWGcUp29cgEeav7uSuQHimAn0Z3jIVDXqMruIVdCZtx0pP2VWoxwQY8Y3/6+ZNgT2RkDNw+BsbEnaOkNLrP1ezPK5IwoFdoRJEPz3vzZzZzRyAzYOletFjSUSqCV2YgtKoShp/ErdeBn47AULDQ9jquXqI/MQYgCI84op7gjjT40sUoLsg6PuuWKzdEMxwHjYNaCwrqQArl7F0bWDT3H1QSK1fKHB0yXI3j jhorn@ovpn-121-157.rdu2.redhat.com'
+admin_pubkey: ''
 # Path for the private key which will be added to localhost ssh_config for proxying through the bastion
 admin_privkey: '~/.ssh/id_rsa'
 
 # Service Principal name
 sp_name: devspec-opc
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
-sp_pass: 
+sp_pass: ''
   
 #######################
 # RHSM 
@@ -23,12 +23,12 @@ sp_pass:
 #######################
 rhsm_user: ''
 rhsm_pass: ''
-rhsm_key: "devplatform_key"
-rhsm_org: "10042944"
+rhsm_key: ""
+rhsm_org: ""
 # Can specify separate pools so only Application nodes use paid subs
 # or keep the same if only using one pool
-rhsm_broker_pool: "8a85f98c6248560c01624882e23d01a0"
-rhsm_node_pool: "8a85f98c6248560c01624882e23d01a0"
+rhsm_broker_pool: ""
+rhsm_node_pool: ""
 rhsm_repos: 
   - rhel-7-server-rpms
   - rhel-7-server-extras-rpms

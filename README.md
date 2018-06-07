@@ -11,11 +11,17 @@ Reqs
 A few Pre-Reqs need to be met and are documented in the Reference Architecture already.  **Ansible 2.5 is required**, the ansible control host running the deployment needs to be registered and subscribed to `rhel-7-server-ansible-2.5-rpms`.  Creating a [Service Principal](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal) is documented as well as setting up the Azure CLI.  Currently the Azure CLI is setup on the ansible control host running the deployment using the playbook `azure_cli.yml` or by following instructions here, [Azure CLI Setup](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#azure_cli_setup).
 
  1. Register the ansible control host used for this deployment with valid RedHat subscription thats able to pull down ansible 2.5 or manually install ansible 2.5. 
-  `sudo subscription-manager register --username < username > --password < password > `
- ` sudo subscription-manager attach --pool < pool_id >`
-  `sudo subscription-manager repos --enable rhel-7-server-ansible-2.5-rpms`
-  `sudo yum install ansible`
+
+`sudo subscription-manager register --username < username > --password < password >` 
+
+`sudo subscription-manager attach --pool < pool_id >` 
+
+`sudo subscription-manager repos --enable rhel-7-server-ansible-2.5-rpms` 
+
+`sudo yum install ansible`
+
   
+
  2.  Install Azure CLI,  using playbook included or manually following above directions.
  `ansible-playbook azure-cli.yml`
  4. Authenticate with Azure,  `az login`  described here, [Azure Authentication](https://docs.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest).

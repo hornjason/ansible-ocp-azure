@@ -8,14 +8,27 @@ This project automates the installation of OpenShift on Azure using ansible.  It
 # Pre-Reqs
 
 Reqs
-A few Pre-Reqs need to be met and are documented in the Reference Architecture already.   Creating a [Service Principal](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal) is documented as well as setting up the Azure CLI.  Currently the Azure CLI is setup on the ansible control host running the deploy automatically by following instructions here, [Azure CLI Setup](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#azure_cli_setup).
+A few Pre-Reqs need to be met and are documented in the Reference Architecture already.  **Ansible 2.5 is required**, the ansible control host running the deployment needs to be registered and subscribed to `rhel-7-server-ansible-2.5-rpms`.  Creating a [Service Principal](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal) is documented as well as setting up the Azure CLI.  Currently the Azure CLI is setup on the ansible control host running the deployment using the playbook `azure_cli.yml` or by following instructions here, [Azure CLI Setup](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#azure_cli_setup).
 
- 1.  Install Azure CLI,  using playbook included or manually following above directions.
- 2. Authenticate with Azure,  `az login`  described here, [Azure Authentication](https://docs.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest).
- 3. Create a Service Principal outlined here, [Creating SP](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal).
- 4. Clone this repository
+ 1. Register the ansible control host used for this deployment with valid RedHat subscription thats able to pull down ansible 2.5 or manually install ansible 2.5. 
+
+`sudo subscription-manager register --username < username > --password < password >` 
+
+`sudo subscription-manager attach --pool < pool_id >` 
+
+`sudo subscription-manager repos --enable rhel-7-server-ansible-2.5-rpms` 
+
+`sudo yum install ansible`
+
+  
+
+ 2.  Install Azure CLI,  using playbook included or manually following above directions.
+ `ansible-playbook azure-cli.yml`
+ 4. Authenticate with Azure,  `az login`  described here, [Azure Authentication](https://docs.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest).
+ 5. Create a Service Principal outlined here, [Creating SP](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal).
+ 6. Clone this repository
  `git clone https://github.com/hornjason/ansible-ocp-azure.git`
- 5. Copy vars.yml.example to vars.yml
+ 7. Copy vars.yml.example to vars.yml
   `cd ansible-ocp-azure; cp vars.yml.example vars.yml `
  
 
@@ -28,7 +41,7 @@ Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive inform
 - **admin_pubkey**: - Copy paste the Public SSH key that will be added to authorized_keys on each VM ex.
  `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB`
  - **admin_privkey**: - Path to the private ssh key associated with the public key above.  ex. `'~/.ssh/id_rsa`
- - **sp_name**: - Service Principal name created in step 3.
+ - **sp_name**: - Service Principal name created in step 5.
  - **sp_secret**: - Service Principal secret 
  - **rhsm_user**: - If subscribing to RHSM using username / password, fill in username
  - **rhsm_pass**: - If subscribing to RHSM using username / password, fill in passowrd for RHSM 

@@ -1,0 +1,675 @@
+- name: Azure | Bastion copy files
+  copy:
+    src: ansible.cfg
+    dest: ansible.cfg
+
+- name: Azure | Manage Resource Group
+  azure_rm_resourcegroup:
+    state: "{{ state }}"
+    name: "{{ rg }}"
+    location: "{{ location }}"
+
+- name: Azure | Manage vNet
+  azure_rm_virtualnetwork:
+    name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefixes_cidr:
+        - "{{ vnet_cidr }}"
+
+- name: Azure | Manage Bastion Network Security Group
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: bastion-nsg
+    purge_rules: yes
+    rules:
+        - name: bastion-ssh
+          description: "SSH access from Internet"
+          protocol: Tcp
+          destination_port_range: 22
+          access: Allow
+          priority: 500
+          direction: Inbound
+
+- name: Azure | Manage Master Network Security Group
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: master-nsg
+    purge_rules: yes
+    rules:
+        - name: master-ssh
+          description: "SSH from bastion"
+          protocol: Tcp
+          destination_port_range: 22
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 500
+          direction: Inbound
+        - name: master-etcd
+          description: "ETCD service ports"
+          protocol: Tcp
+          destination_port_range: 2379-2380
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 525
+          direction: Inbound
+        - name: master-api
+          description: "API port"
+          protocol: Tcp
+          destination_port_range: "{{ api_port }}"
+          access: Allow
+          priority: 550
+          direction: Inbound
+        - name: master-api-lb
+          description: "API LB  port"
+          protocol: Tcp
+          destination_port_range: "{{ api_port }}"
+          access: Allow
+          priority: 575
+          direction: Inbound
+        - name: master-ocp-tcp-dns
+          description: "TCP DNS "
+          protocol: Tcp
+          destination_port_range: 8053
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 600
+          direction: Inbound
+        - name: master-ocp-tcp-fluentd
+          description: "TCP fluentd"
+          protocol: Tcp
+          destination_port_range: 24224
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 625
+          direction: Inbound
+        - name: master-node-kubelet
+          description: "Kubelet"
+          protocol: Tcp
+          destination_port_range: 10250
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 650
+          direction: Inbound
+        - name: master-node-sdn
+          description: "OpenShift SDN"
+          protocol: Udp
+          destination_port_range: 4789
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 675
+          direction: Inbound
+
+- name: Azure | Manage Infra Network Security Group
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: infra-node-nsg
+    purge_rules: yes
+    rules:
+        - name: infra-ssh
+          description: "SSH from bastion"
+          protocol: Tcp
+          destination_port_range: 22
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 500
+          direction: Inbound
+        - name: infra-router-http-ports
+          description: "OpenShift Router HTTP"
+          protocol: Tcp
+          destination_port_range: 80
+          source_address_prefix: AzureLoadBalancer
+          access: Allow
+          priority: 525
+          direction: Inbound
+        - name: infra-router-ports-https
+          description: "OpenShift Router HTTPS"
+          protocol: Tcp
+          destination_port_range: 443
+          source_address_prefix: AzureLoadBalancer
+          access: Allow
+          priority: 550
+          direction: Inbound
+        - name: infra-es-ports-rest
+          description: "ElasticSearch Rest Port"
+          protocol: Tcp
+          destination_port_range: 9200
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 575
+          direction: Inbound
+        - name: infra-es-port-node
+          description: "ElasticSearch Node Port"
+          protocol: Tcp
+          destination_port_range: 9300
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 600
+          direction: Inbound
+        - name: infra-node-kubelet
+          description: "Kubelet"
+          protocol: Tcp
+          destination_port_range: 10250
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 625
+          direction: Inbound
+        - name: infra-node-sdn
+          description: "OpenShift SDN"
+          protocol: Udp
+          destination_port_range: 4789
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 650
+          direction: Inbound
+        - name: infra-router-port-http-vnet
+          description: "OpenShift Router HTTP from vNet"
+          protocol: Tcp
+          destination_port_range: 80
+          access: Allow
+          priority: 675
+          direction: Inbound
+        - name: infra-router-port-https-vnet
+          description: "OpenShift Router HTTPS from vNet"
+          protocol: Tcp
+          destination_port_range: 443
+          access: Allow
+          priority: 700
+          direction: Inbound
+
+- name: Azure | Manage Node Network Security Group
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: node-nsg
+    purge_rules: yes
+    rules:
+        - name: node-ssh
+          description: "SSH from bastion"
+          protocol: Tcp
+          destination_port_range: 22
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 500
+          direction: Inbound
+        - name: node-kubelet
+          description: "Kubelet"
+          protocol: Tcp
+          destination_port_range: 10250
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 525
+          direction: Inbound
+        - name: node-sdn
+          description: "ElasticSearch and OCP Apps"
+          protocol: Tcp
+          destination_port_range: 4789
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 550
+          direction: Inbound
+
+- name: Azure | Manage CNS  Network Security Group
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: cns-nsg
+    purge_rules: yes
+    rules:
+        - name: node-ssh
+          description: "SSH from bastion"
+          protocol: Tcp
+          destination_port_range: 22
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 500
+          direction: Inbound
+        - name: node-kubelet
+          description: "Kubelet"
+          protocol: Tcp
+          destination_port_range: 10250
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 525
+          direction: Inbound
+        - name: node-sdn
+          description: "ElasticSearch and OCP Apps"
+          protocol: Tcp
+          destination_port_range: 4789
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 550
+          direction: Inbound
+        - name: gluster-ssh
+          description: "Gluster SSH"
+          protocol: Tcp
+          destination_port_range: 2222
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 575
+          direction: Inbound
+        - name: gluster-daemon
+          description: "Gluster Daemon"
+          protocol: Tcp
+          destination_port_range: 24008
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 600
+          direction: Inbound
+        - name: gluster-mgmt
+          description: "Gluster Management"
+          protocol: Tcp
+          destination_port_range: 24009
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 625
+          direction: Inbound
+        - name: gluster-client
+          description: "Gluster Clients"
+          protocol: Tcp
+          destination_port_range: 49152-49664
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 650
+          direction: Inbound
+        - name: portmap-tcp
+          description: "Portmap TCP"
+          protocol: Tcp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 675
+          direction: Inbound
+        - name: portmap-udp
+          description: "Portmap UDP"
+          protocol: Udp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 700
+          direction: Inbound
+        - name: gluster-iscsi
+          description: "Gluster ISCSI"
+          protocol: Tcp
+          destination_port_range: 3260
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 725
+          direction: Inbound
+        - name: gluster-block
+          description: "Gluster Blockd"
+          protocol: Tcp
+          destination_port_range: 24010
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 750
+          direction: Inbound
+  when: deploy_cns | default(true) | bool
+
+# Public IPS
+- name: Azure | Manage Master Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: "{{ master_lb_public_ip }}"
+    domain_name_label: "{{ rg }}"
+    allocation_method: Static
+  register: master_lb_ip
+
+- name: Azure | Manage Router Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: "{{ router_lb_public_ip }}"
+    allocation_method: Static
+  register: router_lb_ip
+
+- name: Azure | Manage Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: bastion-static
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+  register: bastion_ip
+
+- set_fact:
+    router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
+
+# LBs
+- name: Azure | Manage Master LB
+  azure_rm_loadbalancer:
+    name: ocpMasterLB
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    frontend_ip_configurations:
+      - name: masterApiFrontend
+        public_ip_address: "{{ master_lb_public_ip }}"
+    backend_address_pools:
+      - name: masterAPIBackend
+    probes:
+      - name: masterHealthProbe
+        port: "{{ api_port }}"
+        protocol: Tcp
+    load_balancing_rules:
+      - name: ocpApiHealth
+        frontend_ip_configuration: masterApiFrontend
+        backend_address_pool: masterAPIBackend
+        probe: masterHealthProbe
+        protocol: Tcp
+        frontend_port: "{{ api_port }}"
+        backend_port: "{{ api_port }}"
+        load_distribution: SourceIPProtocol
+
+- name: Azure | Manage Router LB
+  azure_rm_loadbalancer:
+    name: ocpRouterLB
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    frontend_ip_configurations:
+      - name: routerFrontEnd
+        public_ip_address: "{{ router_lb_public_ip }}"
+    backend_address_pools:
+      - name: routerBackEnd
+    probes:
+      - name: routerHealthProbe
+        port: 80
+        protocol: Tcp
+    load_balancing_rules:
+      - name: routerRule
+        frontend_ip_configuration: routerFrontEnd
+        backend_address_pool: routerBackEnd
+        probe: routerHealthProbe
+        protocol: Tcp
+        frontend_port: 80
+        backend_port: 80
+        load_distribution: SourceIPProtocol
+      - name: httpsRouterRule
+        frontend_ip_configuration: routerFrontEnd
+        backend_address_pool: routerBackEnd
+        probe: routerHealthProbe
+        protocol: Tcp
+        frontend_port: 443
+        backend_port: 443
+        load_distribution: SourceIPProtocol
+
+# availablity Sets
+- name: Azure | Manage Availability Sets
+  azure_rm_availabilityset:
+    name: "{{ item }}"
+    state: "{{ state }}"
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    platform_fault_domain_count: 2
+    sku: Aligned
+  with_items:
+    - "ocp-master-instances"
+    - "ocp-infra-instances"
+    - "ocp-app-instances"
+    - "ocp-cns-instances"
+
+# create VM Nics
+# Lacks ability for adding Nics to backend pool of LB
+# https://github.com/ansible/ansible/issues/36697
+#- name: Azure | Manage VM Nics
+#  azure_rm_networkinterface:
+  #  name: "{{ item.name }}"
+  #  resource_group: "{{ rg }}"
+  #  virtual_network_name: "{{ vnet_name }}"
+  #  subnet_name: "{{ item.subnet }}"
+  #  security_group_name: "{{ }}"
+  #  public_ip: false
+  
+- name: Azure | Manage Master Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-master-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet ocp \
+  --network-security-group master-nsg \
+  --lb-name ocpMasterLB \
+  --lb-address-pools masterAPIBackend \
+  --internal-dns-name ocp-master-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ master_nodes }}"
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+
+- name: Azure | Manage Infra Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-infra-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet ocp \
+  --network-security-group infra-node-nsg \
+  --lb-name ocpRouterLB \
+  --lb-address-pools RouterBackend \
+  --internal-dns-name ocp-infra-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ infra_nodes }}"
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+
+- name: Azure | Manage Node  Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-app-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet ocp \
+  --network-security-group node-nsg \
+  --internal-dns-name ocp-app-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ app_nodes }}"
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+
+- name: Azure | Manage CNS Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-cns-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet ocp \
+  --network-security-group cns-nsg \
+  --internal-dns-name ocp-cns-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ app_nodes }}"
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  when: deploy_cns | default(true) | bool
+
+- name: Azure | Manage Bastion Nic
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet ocp \
+  --network-security-group bastion-nsg \
+  --public-ip-address 'bastion-static' "
+  loop: "{{ infra_nodes }}"
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+
+
+# Create VMs
+- name: Azure | Manage Master VMs
+  azure_rm_virtualmachine:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: ocp-master-{{ item }}
+    availability_set: ocp-master-instances 
+    vm_size: Standard_D4s_v3
+    admin_username: "{{ admin_user }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+      - ocp-master-{{ item }}VMNic
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/{{ admin_user }}/.ssh/authorized_keys
+        key_data: "{{ admin_pubkey }}"
+    image:
+      offer: RHEL
+      publisher: RedHat
+      sku: 7-RAW
+      version: latest
+    data_disks:
+        # Container /var/lib/origin
+        - lun: 0
+          disk_size_gb: 32
+          managed_disk_type: Standard_LRS
+        # Etcd
+        - lun: 1
+          disk_size_gb: 32
+          managed_disk_type: Standard_LRS
+  loop: "{{ master_nodes }}" 
+
+- name: Azure | Manage Infra VMs
+  azure_rm_virtualmachine:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: ocp-infra-{{ item }}
+    availability_set: ocp-infra-instances 
+    vm_size: Standard_D4s_v3
+    admin_username: "{{ admin_user }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+      - ocp-infra-{{ item }}VMNic
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/{{ admin_user }}/.ssh/authorized_keys
+        key_data: "{{ admin_pubkey }}"
+    image:
+      offer: RHEL
+      publisher: RedHat
+      sku: 7-RAW
+      version: latest
+    data_disks:
+        # Container /var/lib/origin
+        - lun: 0
+          disk_size_gb: 64
+          managed_disk_type: Standard_LRS
+  loop: "{{ infra_nodes }}" 
+
+- name: Azure | Manage App VMs
+  azure_rm_virtualmachine:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: ocp-app-{{ item }}
+    availability_set: ocp-app-instances 
+    vm_size: Standard_D4s_v3
+    admin_username: "{{ admin_user }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+      - ocp-app-{{ item }}VMNic
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/{{ admin_user }}/.ssh/authorized_keys
+        key_data: "{{ admin_pubkey }}"
+    image:
+      offer: RHEL
+      publisher: RedHat
+      sku: 7-RAW
+      version: latest
+    data_disks:
+        # Container /var/lib/origin
+        - lun: 0
+          disk_size_gb: 64
+          managed_disk_type: Standard_LRS
+  loop: "{{ app_nodes }}" 
+
+- name: Azure | Manage CNS VMs
+  azure_rm_virtualmachine:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: ocp-cns-{{ item }}
+    availability_set: ocp-cns-instances 
+    vm_size: Standard_D8s_v3
+    admin_username: "{{ admin_user }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+      - ocp-cns-{{ item }}VMNic
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/{{ admin_user }}/.ssh/authorized_keys
+        key_data: "{{ admin_pubkey }}"
+    image:
+      offer: RHEL
+      publisher: RedHat
+      sku: 7-RAW
+      version: latest
+    data_disks:
+        # Container /var/lib/origin
+        - lun: 0
+          disk_size_gb: 64
+          managed_disk_type: Standard_LRS
+        # Bricks
+        - lun: 1
+          disk_size_gb: 512
+          managed_disk_type: Premium_LRS
+  loop: "{{ cns_nodes }}" 
+  when: deploy_cns | default(true) | bool
+
+- name: Azure | Manage Bastion VM
+  azure_rm_virtualmachine:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: bastion
+    vm_size: Standard_D8s_v3
+    admin_username: "{{ admin_user }}"
+    managed_disk_type: Standard_LRS
+    network_interface_names:
+      - bastion-VMNic
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/{{ admin_user }}/.ssh/authorized_keys
+        key_data: "{{ admin_pubkey }}"
+    image:
+      offer: RHEL
+      publisher: RedHat
+      sku: 7-RAW
+      version: latest
+
+# Registry 
+- set_fact: 
+    registry_storage_account: "{{ rg | regex_replace('-') }}"
+
+- name: Azure | Manage Registry Storage Account
+  azure_rm_storageaccount:
+    resource_group: "{{ rg }}"
+    name: "{{ rg | regex_replace('-') }}"
+    state: "{{ state }}"
+    location: "{{ location }}"
+    account_type: Standard_LRS
+- shell: az storage account keys list --account-name "{{ registry_storage_account }}" \
+        --resource-group "{{ rg }}" --query "[?keyName == 'key1'].value" -o tsv
+  register: key
+
+- set_fact:
+    registry_storage_account_key: "{{ key.stdout }}"
+
+- name: Azure | template ansible hosts
+  template:
+    src: hosts.j2
+    dest: hosts
+    backup: yes
+
+- name: Azure | update SSH proxy config
+  blockinfile:
+    path: ~/.ssh/config
+    insertafter: EOF
+    block: |
+      Host bastion
+        HostName     {{ rg }}b.{{ location }}.cloudapp.azure.com
+        User         {{ admin_user }}
+        IdentityFile {{ admin_privkey }}
+      Host ocp*
+        ProxyCommand    ssh {{ admin_user }}@bastion -W %h:%p
+        IdentityFile {{ admin_privkey }}
+        User         {{ admin_user }}
+    
+- name: Refresh inventory to ensure new instaces exist in inventory
+  meta: refresh_inventory
+
+
+

@@ -1,0 +1,128 @@
+[OSEv3:children]
+masters
+etcd
+nodes
+# cns
+{% if deploy_cns | default(true) | bool %}
+glusterfs
+{% endif %}
+[OSEv3:vars]
+ansible_ssh_user=cloud-user
+ansible_become=true
+openshift_cloudprovider_kind=azure
+osm_controller_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf']}
+osm_api_server_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf']}
+openshift_node_kubelet_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf'], 'enable-controller-attach-detach': ['true']}
+openshift_master_api_port=443
+openshift_master_console_port=443
+openshift_hosted_router_replicas=3
+openshift_hosted_registry_replicas=3
+openshift_master_cluster_method=native
+openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
+openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
+openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
+deployment_type=openshift-enterprise
+{% if openshift_master_identity_providers is defined %}
+openshift_master_identity_providers={{ openshift_master_identity_providers }}
+{% else %}
+openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+{% endif %}
+
+{% if openshift_master_htpasswd_users is defined %}
+openshift_master_htpasswd_users={{ openshift_master_htpasswd_users }}
+{% else %}
+# admin:redhat
+openshift_master_htpasswd_users={'admin': '$apr1$VZeARzoK$zYM/4c82PKDeYmw6/RvOV/'}
+{% endif %}
+openshift_master_manage_htpasswd=true
+
+openshift_node_local_quota_per_fsgroup=512Mi
+networkPluginName=redhat/openshift-ovs-multitenant
+
+# Do not uninstall service catalog until post installation. Needs storage class object
+openshift_enable_service_catalog=false
+
+# Gluster Default SC
+{% if deploy_cns | default(true) | bool %}
+openshift_storage_glusterfs_storageclass_default=true
+{% endif %}
+
+
+# Setup azure blob registry storage
+openshift_hosted_registry_storage_kind=object
+openshift_hosted_registry_storage_provider=azure_blob
+openshift_hosted_registry_storage_azure_blob_accountname={{ registry_storage_account }}
+openshift_hosted_registry_storage_azure_blob_accountkey={{ registry_storage_account_key }}
+openshift_hosted_registry_storage_azure_blob_container=registry
+openshift_hosted_registry_storage_azure_blob_realm=core.windows.net
+
+{% if deploy_logging | default(true) | bool %}
+# logging
+openshift_logging_install_logging=true
+openshift_logging_es_pvc_size={{ logging_volume_size | default('100Gi') }}
+openshift_logging_es_pvc_dynamic=True
+{% endif %}
+
+{% if deploy_metrics | default(true) | bool %}
+# metrics
+openshift_metrics_install_metrics=True
+openshift_metrics_storage_volume_size={{ metrics_volume_size | default('20Gi') }}
+openshift_metrics_cassandra_storage_type=dynamic
+openshift_metrics_cassandra_replicas="1"
+{% endif %}
+
+{% if deploy_prometheus | default(true) | bool %}
+# prometheus
+openshift_hosted_prometheus_deploy=true
+openshift_prometheus_storage_kind=dynamic
+openshift_prometheus_storage_type=pvc
+openshift_prometheus_storage_volume_size={{ prometheus_volume_size | default('20Gi') }}
+openshift_prometheus_alertmanager_storage_type=pvc
+openshift_prometheus_alertmanager_pvc_size=10Gi
+openshift_prometheus_alertmanager_pvc_name=alertmanager
+openshift_prometheus_alertbuffer_storage_type=pvc
+{% endif %}
+
+# grafana
+openshift_grafana_state=present
+openshift_grafana_node_exporter=true
+openshift_grafana_storage_type=pvc
+
+[masters]
+ocp-master-1
+ocp-master-2
+ocp-master-3
+
+[infra]
+ocp-infra-1
+ocp-infra-2
+ocp-infra-3
+
+[etcd]
+ocp-master-1
+ocp-master-2
+ocp-master-3
+
+[nodes]
+ocp-master-1 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-1
+ocp-master-2 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-2
+ocp-master-3 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-3
+ocp-infra-1 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-1
+ocp-infra-2 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-2
+ocp-infra-3 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-3
+ocp-app-1 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-1
+ocp-app-2 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-2
+ocp-app-3 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-3
+{% if deploy_cns | default(true) | bool %}
+ocp-cns-1 openshift_schedulable=True openshift_hostname=ocp-cns-1
+ocp-cns-2 openshift_schedulable=True openshift_hostname=ocp-cns-2
+ocp-cns-3 openshift_schedulable=True openshift_hostname=ocp-cns-3
+{% endif %}
+
+{% if deploy_cns | default(true) | bool %}
+[glusterfs]
+ocp-cns-1 glusterfs_devices='[ "/dev/sde" ]'
+ocp-cns-2 glusterfs_devices='[ "/dev/sde" ]'
+ocp-cns-3 glusterfs_devices='[ "/dev/sde" ]'
+{% endif %}
+

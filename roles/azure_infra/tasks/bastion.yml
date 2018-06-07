@@ -1,0 +1,65 @@
+#- set_fact:
+#    router_lb_ip: "{{ hostvars['localhost']['router_lb_ip'] }}"
+#    registry_storage_account_key: "{{  hostvars['localhost']['registry_storage_account_key'] }}"
+- name: add bastion host
+  add_host:
+    name: "{{ rg }}b.{{ location }}.cloudapp.azure.com"
+    groups: bastions
+    ansible_user: "{{ admin_user }}"
+    ansible_become: True
+
+- name: Azure | Bastion RHSM Activation Key
+  redhat_subscription:
+    state: "{{ state }}"
+    activationkey: "{{ rhsm_key }}"
+    org_id: "{{ rhsm_org }}"
+    pool_ids: "{{ rhsm_broker_pool }}"
+  delegate_to: "{{ groups['bastions'][0] }}"
+  when:
+    - rhsm_key is defined and rhsm_key != ""
+    - rhsm_org is defined and rhsm_org != ""
+
+
+- name: Azure | Bastion RHSM Username - Password
+  redhat_subscription:
+    state: "{{ state }}"
+    username: "{{ rhsm_user }}"
+    password: "{{ rhsm_pass }}"
+    pool_ids: "{{ rhsm_broker_pool }}"
+  delegate_to: "{{ groups['bastions'][0] }}"
+  when:
+    - rhsm_user is defined and rhsm_user != ""
+    - rhsm_pass is defined and rhsm_pass != ""
+
+- name: Azure | Bastion disable all repos
+  rhsm_repository:
+    name: '*'
+    state: disabled
+  delegate_to: "{{ groups['bastions'][0] }}"
+
+- name: Azure | Bastion enable repos
+  rhsm_repository:
+    name: "{{ item }}"
+    state: enabled
+  delegate_to: "{{ groups['bastions'][0] }}"
+  loop: "{{ rhsm_repos }}"
+
+- name: Azure | Bastion install required packages
+  package:
+    name: "{{ item }}"
+    state: present
+  delegate_to: "{{ groups['bastions'][0] }}"
+  loop: "{{ bastion_pkgs }}"
+
+- name: Azure | Bastion template ansible hosts
+  template:
+    src: hosts.j2
+    dest: hosts
+    backup: yes
+  delegate_to: "{{ groups['bastions'][0] }}"
+
+- name: Azure | Bastion copy files
+  copy:
+    src: ansible.cfg
+    dest: ansible.cfg
+  delegate_to: "{{ groups['bastions'][0] }}"

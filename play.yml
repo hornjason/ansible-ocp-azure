@@ -1,0 +1,40 @@
+---
+- hosts: localhost
+  vars:
+    local_home: "{{ lookup('env','HOME') }}"
+  roles:
+    - azure_infra
+
+- name: call openshift prerequisites play
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+  vars:
+    container_runtime_docker_storage_type: overlay2
+    container_runtime_docker_storage_setup_device: /dev/sdd
+    #
+    #- name: call openshift deploy_cluster play
+    #  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+    #
+    #
+    #- name: install Grafana
+    #  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
+    #
+    #    - name: Install oc client
+    #      yum:
+    #        name: atomic-openshift-clients
+    #        state: latest
+    #      notify:
+    #        - add cluster-admin
+    #
+    #    - name: copy kube config
+    #      fetch:
+    #        src: ~/.kube/config
+    #        dest: "{{ local_home }}/.kube/"
+    #        flat: yes
+    #      delegate_to: "{{ groups.masters[0] }}"
+    #      notify:
+    #        - add cluster-admin
+    #
+    #  handlers:
+    #    - name: add cluster-admin
+    #      shell: oc adm policy add-cluster-role-to-user cluster-admin "{{ admin_user }}"
+    #

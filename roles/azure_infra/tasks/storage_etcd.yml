@@ -1,0 +1,26 @@
+- name: Create XFS filesystem
+  filesystem:
+    fstype: xfs
+    dev: /dev/sde
+  delegate_to: "{{ item }}"
+
+- name: Set proper permissions on mount point
+  file:
+    path: /var/lib/etcd
+    state: directory
+    mode: 0755
+  delegate_to: "{{ item }}"
+
+- name: Restore SELinux context
+  command: restorecon -R /var/lib/etcd
+  delegate_to: "{{ item }}"
+  changed_when: False
+
+- name: Mount XFS filesystem
+  mount:
+    state: mounted
+    path: /var/lib/etcd
+    src: /dev/sde
+    fstype: xfs
+  delegate_to: "{{ item }}"
+

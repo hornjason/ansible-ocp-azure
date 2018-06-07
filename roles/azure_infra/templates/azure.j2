@@ -1,0 +1,13 @@
+tenantId: {{ tenant_id.stdout }}
+subscriptionId: {{ subscription_id.stdout }}
+aadClientId: {{ sp_id.stdout }}
+aadClientSecret: P@ssw0rd1
+aadTenantID: {{ tenant_id.stdout }}
+resourceGroup: {{ rg }}
+cloud: AzurePublicCloud
+location: {{ location }}
+vnetName: {{ vnet_name }}
+securityGroupName: node-nsg
+primaryAvailabilitySetName: ocp-app-instances
+useInstanceMetadata: true
+

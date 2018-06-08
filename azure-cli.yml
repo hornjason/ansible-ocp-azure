@@ -28,6 +28,6 @@
         state: latest
       loop:
         - azure-cli
-        - ansible
+        #        - ansible
 
 

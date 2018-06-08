@@ -1,3 +1,4 @@
+
 # OpenShift on Azure
 This project automates the installation of OpenShift on Azure using ansible.  It follows the [OpenShift + Azure Reference Architecture](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/) closely. By default the following is deployed, 3 masters, 3 Infra nodes, 3 app nodes, 3 cns nodes, Logging (EFK), Metrics, Prometheus & Grafana.
 
@@ -69,3 +70,6 @@ After all pre-reqs are met and required variables have been filled out the deplo
 `ansible-playbook deploy.yml -e @vars.yml`
 
 The ansible control host running the deployment will be setup to use ssh proxy through the bastion in order to reach all nodes.  The openshift inventory `hosts` file will be templated into the project root directory and used for the Installation.  
+
+# Destroy
+`ansible-playbook destroy.yml -e@vars.yml`

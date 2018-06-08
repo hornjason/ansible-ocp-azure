@@ -9,13 +9,19 @@ This project automates the installation of OpenShift on Azure using ansible.  It
 ## Virtual Machine Sizing
 The following table outlines the sizes used to better understand the vCpu and Memory quotas needed to successfully deploy OpenShift on Azure.  Verify your current subscription quotas meet the below requirements.
 
-Instance | # | VM Size | vCpu's | Memory 
--------- | - | ------- | ------ | -----
+Instance | # |VM Size | vCpu's | Memory  
+-------- | - | ------ | ------ | ----- 
 Master Nodes | 3 | Standard_D4s_v3 | 4 | 16  
 Infra Nodes | 3 |Standard_D4s_v3 | 4 | 16   
 App Nodes | 3 | Standard_D2S_v3 | 2 | 8  
 CNS Nodes | 3 |Standard_D8s_v3 | 8 | 32 
-Total | 12 | | 54 | 216Gb  
+Total | 12 | | 54 | 216Gb 
+
+>After installing and setting up Azure CLI the following command can be used to show available VM Resources in a location.
+```
+az vm list-usage --location westus --output table
+```
+
 
 CNS is optional and can be disabled by setting the following variable in `vars.yml`.
 

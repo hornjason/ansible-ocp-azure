@@ -18,7 +18,7 @@
           redhat_subscription:
             state: absent
           delegate_to: "{{ item }}"
-          loop: "{{ vm_list.stoud_lines }}"
+          loop: "{{ vm_list.stdout_lines }}"
 
         #- name: Unregister VMs
           #command: "az vm run-command invoke -g {{ rg }}  -n {{ item }} --command-id RunShellScript --script 'sudo subscription-manager unregister'"

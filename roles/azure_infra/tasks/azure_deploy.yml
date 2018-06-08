@@ -16,6 +16,14 @@
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
 
+- name: Azure | Manage subnet
+  azure_rm_subnet:
+    name: ocp
+    state: present
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ vnet_cidr }}"
+
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
     resource_group: "{{ rg }}"

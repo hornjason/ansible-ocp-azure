@@ -34,6 +34,7 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
  5. Create a Service Principal outlined here, [Creating SP](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal).
  6. Copy vars.yml.example to vars.yml
   `cp vars.yml.example vars.yml `
+ 7. Fill out required variables below.
  
 
 ## Required Variables

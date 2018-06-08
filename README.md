@@ -27,13 +27,13 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
 ```
 
  2. Clone this repository
- `git clone https://github.com/hornjason/ansible-ocp-azure.git`
+ `git clone https://github.com/hornjason/ansible-ocp-azure.git; cd ansible-ocp-azure`
  3.  Install Azure CLI,  using playbook included or manually following above directions.
 `ansible-playbook azure-cli.yml`
  4. Authenticate with Azure,  `az login`  described here, [Azure Authentication](https://docs.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest).
  5. Create a Service Principal outlined here, [Creating SP](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/#service_principal).
  6. Copy vars.yml.example to vars.yml
-  `cd ansible-ocp-azure; cp vars.yml.example vars.yml `
+  `cp vars.yml.example vars.yml `
  
 
 ## Required Variables

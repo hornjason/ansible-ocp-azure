@@ -22,11 +22,6 @@ Total | 12 | | 54 | 216Gb
 az vm list-usage --location westus --output table
 ```
 
-
-CNS is optional and can be disabled by setting the following variable in `vars.yml`.
-
-**deploy_cns: false**
-
 ## Pre-Reqs
 
 Reqs

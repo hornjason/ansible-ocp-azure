@@ -19,9 +19,3 @@
 - name: Azure | Import storage_etcd.yml
   include_tasks: storage_etcd.yml
   loop: "{{ groups['masters'] }}"
-
-  #- name: call openshift prerequisites play
-  #import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
-  #vars:
-    #  container_runtime_docker_storage_type: overlay2
-    #container_runtime_docker_storage_setup_device: /dev/sdd

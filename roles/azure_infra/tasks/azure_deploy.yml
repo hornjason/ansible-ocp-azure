@@ -16,6 +16,14 @@
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
 
+- name: Azure | Manage subnet
+  azure_rm_subnet:
+    name: ocp
+    state: present
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ vnet_cidr }}"
+
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
     resource_group: "{{ rg }}"
@@ -399,7 +407,7 @@
     resource_group: "{{ rg }}"
     platform_fault_domain_count: 2
     sku: Aligned
-  with_items:
+  loop:
     - "ocp-master-instances"
     - "ocp-infra-instances"
     - "ocp-app-instances"
@@ -407,7 +415,7 @@
 
 # create VM Nics
 # Lacks ability for adding Nics to backend pool of LB
-# https://github.com/ansible/ansible/issues/36697
+# https://github.com/ansible/ansible/issues/37734
 #- name: Azure | Manage VM Nics
 #  azure_rm_networkinterface:
   #  name: "{{ item.name }}"
@@ -432,6 +440,7 @@
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
+  changed_when: false
 
 - name: Azure | Manage Infra Nics
   shell: " az network nic create  --resource-group {{ rg }} \
@@ -448,6 +457,7 @@
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
+  changed_when: false
 
 - name: Azure | Manage Node  Nics
   shell: " az network nic create  --resource-group {{ rg }} \
@@ -462,6 +472,7 @@
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
+  changed_when: false
 
 - name: Azure | Manage CNS Nics
   shell: " az network nic create  --resource-group {{ rg }} \
@@ -476,6 +487,7 @@
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
+  changed_when: false
   when: deploy_cns | default(true) | bool
 
 - name: Azure | Manage Bastion Nic
@@ -489,7 +501,7 @@
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
-
+  changed_when: false
 
 # Create VMs
 - name: Azure | Manage Master VMs
@@ -513,12 +525,18 @@
       sku: 7-RAW
       version: latest
     data_disks:
-        # Container /var/lib/origin
+        # Container Storage for emptydir  /var/lib/origin
+        # /dev/sdc
         - lun: 0
           disk_size_gb: 32
           managed_disk_type: Standard_LRS
-        # Etcd
+        # Docker VG
+        # /dev/sdd
         - lun: 1
+          disk_size_gb: 32
+          managed_disk_type: Standard_LRS
+        # Etcd
+        - lun: 2
           disk_size_gb: 32
           managed_disk_type: Standard_LRS
   loop: "{{ master_nodes }}" 
@@ -544,9 +562,15 @@
       sku: 7-RAW
       version: latest
     data_disks:
-        # Container /var/lib/origin
+        # Container Storage for emptydir  /var/lib/origin
+        # /dev/sdc
         - lun: 0
           disk_size_gb: 64
+          managed_disk_type: Standard_LRS
+        # Docker VG
+        # /dev/sdd
+        - lun: 1
+          disk_size_gb: 32
           managed_disk_type: Standard_LRS
   loop: "{{ infra_nodes }}" 
 
@@ -571,9 +595,15 @@
       sku: 7-RAW
       version: latest
     data_disks:
-        # Container /var/lib/origin
+        # Container Storage for emptydir  /var/lib/origin
+        # /dev/sdc
         - lun: 0
           disk_size_gb: 64
+          managed_disk_type: Standard_LRS
+        # Docker VG
+        # /dev/sdd
+        - lun: 1
+          disk_size_gb: 32
           managed_disk_type: Standard_LRS
   loop: "{{ app_nodes }}" 
 
@@ -598,12 +628,19 @@
       sku: 7-RAW
       version: latest
     data_disks:
-        # Container /var/lib/origin
+        # Container Storage for emptydir  /var/lib/origin
+        # /dev/sdc
         - lun: 0
           disk_size_gb: 64
           managed_disk_type: Standard_LRS
-        # Bricks
+        # Docker VG
+        # /dev/sdd
         - lun: 1
+          disk_size_gb: 32
+          managed_disk_type: Standard_LRS
+        # Bricks
+        # /dev/sde
+        - lun: 2
           disk_size_gb: 512
           managed_disk_type: Premium_LRS
   loop: "{{ cns_nodes }}" 

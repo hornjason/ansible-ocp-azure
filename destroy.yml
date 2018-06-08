@@ -6,6 +6,7 @@
     - name: Destroy Azure | Check for ResourceGroup
       shell: az group exists --name "{{ rg }}"
       register: rg_exist
+      tags: always
     
     - block:
         - debug: var=rg_exist
@@ -118,4 +119,17 @@
             name: "{{ item }}"
             state: absent
           loop: "{{ nsg_list.stdout_lines }}"
+
+        - name: Destroy Azure | Gather list of vNets
+          shell:  az network vnet list -g "{{ rg }}" --query '[].name' -o tsv
+          register: vnet_list
+          tags: vnet
+
+        - name: Destroy Azure | Delete vNet
+          azure_rm_virtualnetwork:
+            resource_group: "{{ rg }}"
+            name: "{{ item }}"
+            state: absent
+          tags: vnet
+          loop: "{{ vnet_list.stdout_lines }}"
       when: rg_exist.stdout == 'true'

@@ -24,6 +24,7 @@ admin_privkey: '~/.ssh/id_rsa'
 #######################
 # Service Principal 
 #######################
+# This is used to template the cloud config file on each node for azure
 sp_name: devops
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
 sp_secret: 'password'

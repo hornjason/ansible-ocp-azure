@@ -2,8 +2,8 @@
 - hosts: localhost
   vars:
     local_home: "{{ lookup('env','HOME') }}"
-    #roles:
-      #- azure_infra
+    roles:
+      - azure_infra
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
@@ -17,8 +17,8 @@
 # HACK: fails to connect to grafana svc the first time so run it twice
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-- name: install Grafana
-  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
+#- name: install Grafana
+#  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
 
 
 - hosts: localhost
@@ -33,7 +33,7 @@
     - name: copy kube config
       fetch:
         src: ~/.kube/config
-        dest: "{{ local_home }}/.kube/"
+        dest: "~/.kube/"
         flat: yes
       delegate_to: "{{ groups.masters[0] }}"
       notify:

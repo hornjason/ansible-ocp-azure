@@ -80,7 +80,7 @@ registry_storage_account: "{{ rg | regex_replace('-') }}"
 # OCP Identity
 # Use 'htpasswd -n <user>' to generate password hash. (htpasswd from httpd-tools RPM)
 #######################
-# Example with admin:redhat
+# Example with admin:changeme
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
 openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
 

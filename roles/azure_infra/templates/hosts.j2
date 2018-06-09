@@ -12,6 +12,17 @@ glusterfs
 oreg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
 oreg_url_node=registry.access.redhat.com/openshift3/ose-${component}:${version}
 
+{% if deploy_cns | default(true) | bool %}
+# CNS Bug https://bugzilla.redhat.com/show_bug.cgi?id=1581622
+openshift_storage_glusterfs_heketi_image=registry.access.redhat.com/rhgs3/rhgs-volmanager-rhel7
+openshift_storage_glusterfs_image=registry.access.redhat.com/rhgs3/rhgs-server-rhel7
+openshift_storage_glusterfs_block_image=registry.access.redhat.com/rhgs3/rhgs-gluster-block-prov-rhel7
+openshift_storage_glusterfs_s3_image=registry.access.redhat.com/rhgs3/rhgs-gluster-s3-server-rhel7# 
+
+# Gluster Default SC
+openshift_storage_glusterfs_storageclass_default=true
+{% endif %}
+
 ansible_ssh_user=cloud-user
 ansible_become=true
 openshift_cloudprovider_kind=azure
@@ -46,12 +57,6 @@ networkPluginName=redhat/openshift-ovs-multitenant
 
 # Do not uninstall service catalog until post installation. Needs storage class object
 openshift_enable_service_catalog=false
-
-# Gluster Default SC
-{% if deploy_cns | default(true) | bool %}
-openshift_storage_glusterfs_storageclass_default=true
-{% endif %}
-
 
 # Setup azure blob registry storage
 openshift_hosted_registry_storage_kind=object

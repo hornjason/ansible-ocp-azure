@@ -2,8 +2,8 @@
 - hosts: localhost
   vars:
     local_home: "{{ lookup('env','HOME') }}"
-    roles:
-      - azure_infra
+  roles:
+    - azure_infra
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml

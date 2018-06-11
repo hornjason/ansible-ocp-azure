@@ -1,6 +1,6 @@
 
 # OpenShift on Azure
-This project automates the installation of OpenShift on Azure using ansible.  It follows the [OpenShift + Azure Reference Architecture](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/) closely. By default the following is deployed, 3 masters, 3 Infra nodes, 3 app nodes, 3 cns nodes, Logging (EFK), Metrics, Prometheus & Grafana.
+This project automates the installation of OpenShift on Azure using ansible.  It follows the [OpenShift + Azure Reference Architecture](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/) closely. By default the following is deployed, 3 masters, 3 Infra nodes, 3 app nodes, 3 cns nodes, Logging (EFK), Metrics, Prometheus & Grafana. SSH access is restricted into the cluster by allowing only the bastion to reach each Node,  ssh is then proxied from the ansible control host via the bastion accesing nodes by hostname.  `ssh ocp-master-1`   
 
 ## Topology
 
@@ -9,14 +9,14 @@ This project automates the installation of OpenShift on Azure using ansible.  It
 ## Virtual Machine Sizing
 The following table outlines the sizes used to better understand the vCpu and Memory quotas needed to successfully deploy OpenShift on Azure.  Verify your current subscription quotas meet the below requirements.
 
-Instance | # |VM Size | vCpu's | Memory  
--------- | - | ------ | ------ | ----- 
-Master Nodes | 3 | Standard_D4s_v3 | 4 | 16  
-Infra Nodes | 3 | Standard_D4s_v3 | 4 | 16   
-App Nodes | 3 | Standard_D2S_v3 | 2 | 8  
-CNS Nodes | 3 | Standard_D8s_v3 | 8 | 32 
-Bastion | 1 | Standard_D1 | 1 | 3.5
-Total | 13 | | 55 | 219.5Gb 
+Instance | Hostname | # |VM Size | vCpu's | Memory  
+-------- | -------- | - | ------ | ------ | ----- 
+Master Nodes | ocp-master-# | 3 | Standard_D4s_v3 | 4 | 16  
+Infra Nodes | ocp-infra-# | 3 | Standard_D4s_v3 | 4 | 16   
+App Nodes | ocp-app-# | 3 | Standard_D2S_v3 | 2 | 8  
+CNS Nodes | ocp-cns-# | 3 | Standard_D8s_v3 | 8 | 32 
+Bastion | | 1 | Standard_D1 | 1 | 3.5
+Total | | 13 | | 55 | 219.5Gb 
 
 >After installing and setting up Azure CLI the following command can be used to show available VM Resources in a location.
 ```

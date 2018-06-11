@@ -524,23 +524,40 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Etcd
-        - lun: 2
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ master_nodes }}" 
 
+  # create - mount data disk in order above method was unreliable
+  # Container Storage for emptydir  /var/lib/origin /dev/sdc
+  - name: Azure | Master node mount container managed disk
+    azure_rm_managed_disk:
+      name: "ocp-master-container-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32 
+      managed_by: "ocp-master-{{ item }}"
+    loop: "{{ master_nodes }}"
+
+  # Docker VG /dev/sdd
+  - name: Azure | Master node mount docker managed disk
+    azure_rm_managed_disk:
+      name: "ocp-master-docker-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-master-{{ item }}"
+    loop: "{{ master_nodes }}"
+
+  # ETCD /dev/sde
+  - name: Azure | Master node mount ETCD managed disk
+    azure_rm_managed_disk:
+      name: "ocp-master-etcd-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-etcd-{{ item }}"
+    loop: "{{ master_nodes }}"
+
+# Infra VMs
 - name: Azure | Manage Infra VMs
   azure_rm_virtualmachine:
     resource_group: "{{ rg }}"
@@ -561,18 +578,29 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ infra_nodes }}" 
+
+  # create - mount data disk in order above method was unreliable
+  # Container Storage for emptydir  /var/lib/origin /dev/sdc
+  - name: Azure | Infra node mount container managed disk
+    azure_rm_managed_disk:
+      name: "ocp-infra-container-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 64
+      managed_by: "ocp-infra-{{ item }}"
+    loop: "{{ infra_nodes }}"
+
+  # Docker VG /dev/sdd
+  - name: Azure | Infra node mount docker managed disk
+    azure_rm_managed_disk:
+      name: "ocp-infra-docker-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-infra-{{ item }}"
+    loop: "{{ infra_nodes }}"
+
 
 - name: Azure | Manage App VMs
   azure_rm_virtualmachine:
@@ -594,19 +622,30 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ app_nodes }}" 
 
+  # create - mount data disk in order above method was unreliable
+  # Container Storage for emptydir  /var/lib/origin /dev/sdc
+  - name: Azure | App node mount container managed disk
+    azure_rm_managed_disk:
+      name: "ocp-app-container-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 64
+      managed_by: "ocp-app-{{ item }}"
+    loop: "{{ app_nodes }}"
+
+  # Docker VG /dev/sdd
+  - name: Azure | App node mount docker managed disk
+    azure_rm_managed_disk:
+      name: "ocp-app-docker-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-app-{{ item }}"
+    loop: "{{ app_nodes }}"
+
+# CNS VMs
 - block:
   - name: Azure | Manage CNS VMs
     azure_rm_virtualmachine:
@@ -628,27 +667,11 @@
         publisher: RedHat
         sku: 7-RAW
         version: latest
-        #    data_disks:
-        #        # Container Storage for emptydir  /var/lib/origin
-        #        # /dev/sdc
-        #        - lun: 0
-        #          disk_size_gb: 64
-        #          managed_disk_type: Standard_LRS
-        #        # Docker VG
-        #        # /dev/sdd
-        #        - lun: 1
-        #          disk_size_gb: 32
-        #          managed_disk_type: Standard_LRS
-        #        # Bricks
-        #        # /dev/sde
-        #        - lun: 2
-        #          disk_size_gb: 512
-        #          managed_disk_type: Standard_LRS
     loop: "{{ cns_nodes }}" 
   
   # create - mount data disk in order above method was unreliable
   # Container Storage for emptydir  /var/lib/origin /dev/sdc
-  - name: Azure | Mount container managed disk CNS node
+  - name: Azure | CNS node mount container managed disk
     azure_rm_managed_disk:
       name: "ocp-cns-container-{{ item }}" 
       location: "{{ location }}"
@@ -664,7 +687,7 @@
       location: "{{ location }}"
       resource_group: "{{ rg }}"
       disk_size_gb: 32
-      managed_by: "ocp-cns-{{ item  }}"
+      managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
 
   # Bricks /dev/sde 
@@ -674,7 +697,7 @@
       location: "{{ location }}"
       resource_group: "{{ rg }}"
       disk_size_gb: 512
-      managed_by: "ocp-cns-{{ item  }}"
+      managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
 
   when: deploy_cns | default(true) | bool

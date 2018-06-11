@@ -102,40 +102,43 @@ openshift_grafana_node_exporter=true
 openshift_grafana_storage_type=pvc
 
 [masters]
-ocp-master-1
-ocp-master-2
-ocp-master-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}
+{% endfor %}
 
 [infra]
-ocp-infra-1
-ocp-infra-2
-ocp-infra-3
+{% for i in infra_nodes %}
+ocp-infra-{{ i }}
+{% endfor %}
 
 [etcd]
-ocp-master-1
-ocp-master-2
-ocp-master-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}
+{% endfor %}
 
 [nodes]
-ocp-master-1 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-1
-ocp-master-2 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-2
-ocp-master-3 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-3
-ocp-infra-1 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-1
-ocp-infra-2 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-2
-ocp-infra-3 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-3
-ocp-app-1 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-1
-ocp-app-2 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-2
-ocp-app-3 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}  openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-{{ i }}
+{% endfor %}
+
+{% for i in infra_nodes %}
+ocp-infra-{{ i }}  openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-{{ i }}
+{% endfor %}
+
+{% for i in app_nodes %}
+ocp-app-{{ i }} openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-{{ i }}
+{% endfor %}
+
 {% if deploy_cns | default(true) | bool %}
-ocp-cns-1 openshift_schedulable=True openshift_hostname=ocp-cns-1
-ocp-cns-2 openshift_schedulable=True openshift_hostname=ocp-cns-2
-ocp-cns-3 openshift_schedulable=True openshift_hostname=ocp-cns-3
+{% for i in cns_nodes %}
+ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
+{% endfor %}
 {% endif %}
 
 {% if deploy_cns | default(true) | bool %}
 [glusterfs]
-ocp-cns-1 glusterfs_devices='[ "/dev/sde" ]'
-ocp-cns-2 glusterfs_devices='[ "/dev/sde" ]'
-ocp-cns-3 glusterfs_devices='[ "/dev/sde" ]'
+{% for i in cns_nodes %}
+ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/sde" ]'
+{% endfor %}
 {% endif %}
 

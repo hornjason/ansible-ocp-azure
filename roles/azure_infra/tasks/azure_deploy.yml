@@ -526,36 +526,36 @@
       version: latest
   loop: "{{ master_nodes }}" 
 
-  # create - mount data disk in order above method was unreliable
-  # Container Storage for emptydir  /var/lib/origin /dev/sdc
-  - name: Azure | Master node mount container managed disk
-    azure_rm_managed_disk:
-      name: "ocp-master-container-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32 
-      managed_by: "ocp-master-{{ item }}"
-    loop: "{{ master_nodes }}"
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | Master node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-container-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32 
+    managed_by: "ocp-master-{{ item }}"
+  loop: "{{ master_nodes }}"
 
-  # Docker VG /dev/sdd
-  - name: Azure | Master node mount docker managed disk
-    azure_rm_managed_disk:
-      name: "ocp-master-docker-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32
-      managed_by: "ocp-master-{{ item }}"
-    loop: "{{ master_nodes }}"
+# Docker VG /dev/sdd
+- name: Azure | Master node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-master-{{ item }}"
+  loop: "{{ master_nodes }}"
 
-  # ETCD /dev/sde
-  - name: Azure | Master node mount ETCD managed disk
-    azure_rm_managed_disk:
-      name: "ocp-master-etcd-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32
-      managed_by: "ocp-etcd-{{ item }}"
-    loop: "{{ master_nodes }}"
+# ETCD /dev/sde
+- name: Azure | Master node mount ETCD managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-etcd-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-etcd-{{ item }}"
+  loop: "{{ master_nodes }}"
 
 # Infra VMs
 - name: Azure | Manage Infra VMs
@@ -580,26 +580,26 @@
       version: latest
   loop: "{{ infra_nodes }}" 
 
-  # create - mount data disk in order above method was unreliable
-  # Container Storage for emptydir  /var/lib/origin /dev/sdc
-  - name: Azure | Infra node mount container managed disk
-    azure_rm_managed_disk:
-      name: "ocp-infra-container-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 64
-      managed_by: "ocp-infra-{{ item }}"
-    loop: "{{ infra_nodes }}"
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | Infra node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-infra-container-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 64
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
 
-  # Docker VG /dev/sdd
-  - name: Azure | Infra node mount docker managed disk
-    azure_rm_managed_disk:
-      name: "ocp-infra-docker-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32
-      managed_by: "ocp-infra-{{ item }}"
-    loop: "{{ infra_nodes }}"
+# Docker VG /dev/sdd
+- name: Azure | Infra node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-infra-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
 
 
 - name: Azure | Manage App VMs
@@ -624,26 +624,26 @@
       version: latest
   loop: "{{ app_nodes }}" 
 
-  # create - mount data disk in order above method was unreliable
-  # Container Storage for emptydir  /var/lib/origin /dev/sdc
-  - name: Azure | App node mount container managed disk
-    azure_rm_managed_disk:
-      name: "ocp-app-container-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 64
-      managed_by: "ocp-app-{{ item }}"
-    loop: "{{ app_nodes }}"
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | App node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-app-container-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 64
+    managed_by: "ocp-app-{{ item }}"
+  loop: "{{ app_nodes }}"
 
-  # Docker VG /dev/sdd
-  - name: Azure | App node mount docker managed disk
-    azure_rm_managed_disk:
-      name: "ocp-app-docker-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32
-      managed_by: "ocp-app-{{ item }}"
-    loop: "{{ app_nodes }}"
+# Docker VG /dev/sdd
+- name: Azure | App node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-app-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-app-{{ item }}"
+  loop: "{{ app_nodes }}"
 
 # CNS VMs
 - block:

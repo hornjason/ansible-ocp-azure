@@ -65,8 +65,8 @@ Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive inform
 
  - **location**:  - Azure location for deployment ex. `eastus`
  - **rg**:  - Azure Resource Group ex. `test-rg`
-- **admin_user**: - SSH user that will be created on each VM ex. `cloud-user`
-- **admin_pubkey**: - Copy paste the Public SSH key that will be added to authorized_keys on each VM ex.
+ - **admin_user**: - SSH user that will be created on each VM ex. `cloud-user`
+ - **admin_pubkey**: - Copy paste the Public SSH key that will be added to authorized_keys on each VM ex.
  `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB`
  - **admin_privkey**: - Path to the private ssh key associated with the public key above.  ex. `'~/.ssh/id_rsa`
  - **sp_name**: - Service Principal name created in step 5.
@@ -77,7 +77,11 @@ Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive inform
  - **rhsm_org**: - If subscribing to RHSM using activation key and orgId fill in orgId here.
  - **rhsm_broker_pool**: - If you have a broker pool id for masters / infra nodes fill it in here.  This will be used to for all masters/infra nodes.  If you only have one pool id to use make this the same as `rhsm_node_pool`.
  - **rhsm_node_pool**: - If you have a application pool id for app nodes fill it in here.  This will be used for all application nodes.  If you only have one pool id to use make this the same as `rhsm_broker_pool`
- 
+Number of Nodes
+ - **master_nodes**: Defaults to 3 -> [1,2,3]
+ - **infra_nodes**:  Defaults to 3 -> [1,2,3]
+ - **app_nodes**:    Defaults to 3 -> [1,2,3] add additional nodes here.
+ - **cns_nodes**:    Defaults to 3 -> [1,2,3], the min. required.
 
 Optional Variables:
 

@@ -748,6 +748,7 @@
 
 - name: Azure | update SSH proxy config
   blockinfile:
+    create: yes
     path: ~/.ssh/config
     insertafter: EOF
     block: |

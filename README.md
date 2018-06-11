@@ -58,7 +58,7 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
   cp vars.yml.example vars.yml 
   ```
  7. Fill out required variables below.
- 
+ 8. Due to bug https://github.com/ansible/ansible/issues/40332 if the ansible control host used to deploy from has LANG set to something other than `en` then `unset LANG`
 
 ## Required Variables
 Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive information is left out and should be entered in `vars.yml`.  Below are required variables that should be filled in before deploying.

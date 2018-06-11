@@ -12,10 +12,11 @@ The following table outlines the sizes used to better understand the vCpu and Me
 Instance | # |VM Size | vCpu's | Memory  
 -------- | - | ------ | ------ | ----- 
 Master Nodes | 3 | Standard_D4s_v3 | 4 | 16  
-Infra Nodes | 3 |Standard_D4s_v3 | 4 | 16   
+Infra Nodes | 3 | Standard_D4s_v3 | 4 | 16   
 App Nodes | 3 | Standard_D2S_v3 | 2 | 8  
-CNS Nodes | 3 |Standard_D8s_v3 | 8 | 32 
-Total | 12 | | 54 | 216Gb 
+CNS Nodes | 3 | Standard_D8s_v3 | 8 | 32 
+Bastion | 1 | Standard_D1 | 1 | 3.5
+Total | 13 | | 55 | 219.5Gb 
 
 >After installing and setting up Azure CLI the following command can be used to show available VM Resources in a location.
 ```

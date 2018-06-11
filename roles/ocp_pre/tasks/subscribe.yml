@@ -3,36 +3,35 @@
   file: 
     path: /etc/yum.repos.d/rh-cloud.repo 
     state: absent
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | Remove yum rhui load balancers
   file: 
     path: /etc/yum.repos.d/rhui-load-balancers 
     state: absent
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | Remove RHEL7 package
   yum: 
     name: RHEL7 
     state: absent
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | RHSM increase timeout
   lineinfile:
     dest: /etc/rhsm/rhsm.conf
     line: 'server_timeout=600'
     insertafter: '^proxy_password ='
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | RHSM unregister
   redhat_subscription:
     state: absent
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  register: task_result
+  until: task_result is success
+  retries: 10
+  delay: 30
+  when: "'nodes' in group_names"
 
 - name: Azure | RHSM register (username-passwd) Master-Infra-CNS
   redhat_subscription:
@@ -41,12 +40,14 @@
     pasword: "{{ rhsm_pass }}"
     pool_ids: "{{ rhsm_broker_pool }}"
   register: task_result
+  serial: 5
   until: task_result is success
   retries: 10
   delay: 30
-  delegate_to: "{{ item }}"
-  loop: "{{ query('inventory_hostnames', 'masters:glusterfs:infra') }}"
-  when:
+  when: 
+    - ( inventory_hostname in groups.masters ) or
+      ( inventory_hostname in groups.infra ) or 
+      ( inventory_hostname in groups.glusterfs )
     - rhsm_user is defined and rhsm_user != ""
     - rhsm_pass is defined and rhsm_pass != ""
 
@@ -57,12 +58,14 @@
     org_id: "{{ rhsm_org }}"
     pool_ids: "{{ rhsm_broker_pool }}"
   register: task_result
+  serial: 5
   until: task_result is success
   retries: 10
   delay: 30
-  delegate_to: "{{ item }}"
-  loop: "{{ query('inventory_hostnames', 'masters:glusterfs:infra') }}"
-  when:
+  when: 
+    - ( inventory_hostname in groups.masters ) or
+      ( inventory_hostname in groups.infra )   or 
+      ( inventory_hostname in groups.glusterfs )
     - rhsm_key is defined and rhsm_key != ""
     - rhsm_org is defined and rhsm_org != ""
 
@@ -70,23 +73,27 @@
   redhat_subscription:
     state: absent
     pool_ids: "{{ rhsm_node_pool }}"
-  delegate_to: "{{ item }}"
-  loop: "{{ query('inventory_hostnames', 'masters:glusterfs:infra') }}"
-  when: rhsm_node_pool != rhsm_broker_pool
+  when: 
+    - ( inventory_hostname in groups.masters ) or
+      ( inventory_hostname in groups.infra )   or 
+      ( inventory_hostname in groups.glusterfs )
+    - rhsm_node_pool != rhsm_broker_pool
 
-- name: Azure | RHSM (username-passwd) eApplication nodes 
+- name: Azure | RHSM register (username-passwd) Application nodes 
   redhat_subscription:
     state: present
     username: "{{ rhsm_user }}"
     password: "{{ rhsm_pass }}"
     pool_ids: "{{ rhsm_node_pool }}"
   register: task_result
+  serial: 5
   until: task_result is success
   retries: 10
   delay: 30
-  delegate_to: "{{ item }}"
-  loop: "{{ query('inventory_hostnames', 'nodes:!masters:!glusterfs:!infra') }}"
-  when:
+  when: 
+    - inventory_hostname not in groups.masters 
+    - inventory_hostname not in groups.infra 
+    - inventory_hostname not in groups.glusterfs
     - rhsm_user is defined and rhsm_user != ""
     - rhsm_pass is defined and rhsm_pass != ""
 
@@ -97,12 +104,14 @@
     org_id: "{{ rhsm_org }}"
     pool_ids: "{{ rhsm_node_pool }}"
   register: task_result
+  serial: 5
   until: task_result is success
   retries: 10
   delay: 30
-  delegate_to: "{{ item }}"
-  loop: "{{ query('inventory_hostnames', 'nodes:!masters:!glusterfs:!infra') }}"
   when:
+    - inventory_hostname not in groups.masters 
+    - inventory_hostname not in groups.infra 
+    - inventory_hostname not in groups.glusterfs
     - rhsm_key is defined and rhsm_key != ""
     - rhsm_org is defined and rhsm_org != ""
 
@@ -114,23 +123,21 @@
   until: repo_result is success
   retries: 10
   delay: 30
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['nodes'] }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | RHSM enable repos for OCP
   rhsm_repository:
     name: "{{ rhsm_repos }}"
     state: enabled
   until: repo_result is success
+  serial: 5
   retries: 10
   delay: 30
   register: repo_result
-  delegate_to: "{{ item }}"
-  loop: "{{ groups.nodes }}"
+  when: "'nodes' in group_names"
 
 - name: Azure | Install OCP client
   yum:
     name: atomic-openshift-clients
     state: latest
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['masters'] }}"
+  when: "'masters' in group_names"

@@ -38,6 +38,7 @@ openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
 deployment_type=openshift-enterprise
+
 {% if openshift_master_identity_providers is defined %}
 openshift_master_identity_providers={{ openshift_master_identity_providers }}
 {% else %}
@@ -55,6 +56,8 @@ openshift_master_manage_htpasswd=true
 openshift_node_local_quota_per_fsgroup=512Mi
 networkPluginName=redhat/openshift-ovs-multitenant
 
+# disable cockpit
+osm_use_cockpit=false
 # Do not uninstall service catalog until post installation. Needs storage class object
 openshift_enable_service_catalog=false
 

@@ -19,7 +19,6 @@
     - rhsm_key is defined and rhsm_key != ""
     - rhsm_org is defined and rhsm_org != ""
 
-
 - name: Azure | Bastion RHSM Username - Password
   redhat_subscription:
     state: "{{ state }}"
@@ -39,17 +38,15 @@
 
 - name: Azure | Bastion enable repos
   rhsm_repository:
-    name: "{{ item }}"
+    name: "{{ rhsm_repos }}"
     state: enabled
   delegate_to: "{{ groups['bastions'][0] }}"
-  loop: "{{ rhsm_repos }}"
 
 - name: Azure | Bastion install required packages
-  package:
-    name: "{{ item }}"
+  yum:
+    name: "{{ bastion_pkgs }}"
     state: present
   delegate_to: "{{ groups['bastions'][0] }}"
-  loop: "{{ bastion_pkgs }}"
 
 - name: Azure | Bastion template ansible hosts
   template:

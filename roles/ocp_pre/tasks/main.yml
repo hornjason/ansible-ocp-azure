@@ -1,0 +1,15 @@
+---
+# tasks file for ocp_pre
+
+- name: Azure | Import cloudprovider.yml
+  include_tasks: cloudprovider.yml
+
+- name: Azure | Import subscribe.yml
+  include_tasks: subscribe.yml
+
+- name: Azure | Import storage_container.yml
+  include_tasks: storage_container.yml
+
+- name: Azure | Import storage_etcd.yml
+  include_tasks: storage_etcd.yml
+  when: inventory_hostname in groups.masters

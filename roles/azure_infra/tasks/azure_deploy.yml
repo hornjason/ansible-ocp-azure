@@ -607,43 +607,76 @@
           managed_disk_type: Standard_LRS
   loop: "{{ app_nodes }}" 
 
-- name: Azure | Manage CNS VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-cns-{{ item }}
-    availability_set: ocp-cns-instances 
-    vm_size: Standard_D8s_v3
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-cns-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Bricks
-        # /dev/sde
-        - lun: 2
-          disk_size_gb: 512
-          managed_disk_type: Premium_LRS
-  loop: "{{ cns_nodes }}" 
+- block:
+  - name: Azure | Manage CNS VMs
+    azure_rm_virtualmachine:
+      resource_group: "{{ rg }}"
+      state: "{{ state }}"
+      name: ocp-cns-{{ item }}
+      availability_set: ocp-cns-instances 
+      vm_size: Standard_D8s_v3
+      admin_username: "{{ admin_user }}"
+      managed_disk_type: Standard_LRS
+      network_interface_names:
+        - ocp-cns-{{ item }}VMNic
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/{{ admin_user }}/.ssh/authorized_keys
+          key_data: "{{ admin_pubkey }}"
+      image:
+        offer: RHEL
+        publisher: RedHat
+        sku: 7-RAW
+        version: latest
+        #    data_disks:
+        #        # Container Storage for emptydir  /var/lib/origin
+        #        # /dev/sdc
+        #        - lun: 0
+        #          disk_size_gb: 64
+        #          managed_disk_type: Standard_LRS
+        #        # Docker VG
+        #        # /dev/sdd
+        #        - lun: 1
+        #          disk_size_gb: 32
+        #          managed_disk_type: Standard_LRS
+        #        # Bricks
+        #        # /dev/sde
+        #        - lun: 2
+        #          disk_size_gb: 512
+        #          managed_disk_type: Standard_LRS
+    loop: "{{ cns_nodes }}" 
+  
+  # create - mount data disk in order above method was unreliable
+  # Container Storage for emptydir  /var/lib/origin /dev/sdc
+  - name: Azure | Mount container managed disk CNS node
+    azure_rm_managed_disk:
+      name: "ocp-cns-container-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 64
+      managed_by: "ocp-cns-{{ item  }}"
+    loop: "{{ cns_nodes }}"
+
+  # Docker VG /dev/sdd
+  - name: Azure | CNS node mount docker managed disk
+    azure_rm_managed_disk:
+      name: "ocp-cns-docker-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-cns-{{ item  }}"
+    loop: "{{ cns_nodes }}"
+
+  # Bricks /dev/sde 
+  - name: Azure | CNS node mount BRICK managed disk
+    azure_rm_managed_disk:
+      name: "ocp-cns-volume-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 512
+      managed_by: "ocp-cns-{{ item  }}"
+    loop: "{{ cns_nodes }}"
+
   when: deploy_cns | default(true) | bool
 
 - name: Azure | Manage Bastion VM

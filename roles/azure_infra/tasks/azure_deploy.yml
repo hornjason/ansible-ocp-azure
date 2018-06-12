@@ -554,7 +554,7 @@
     location: "{{ location }}"
     resource_group: "{{ rg }}"
     disk_size_gb: 32
-    managed_by: "ocp-etcd-{{ item }}"
+    managed_by: "ocp-master-{{ item }}"
   loop: "{{ master_nodes }}"
 
 # Infra VMs

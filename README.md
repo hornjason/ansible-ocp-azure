@@ -17,7 +17,7 @@ Master Nodes | ocp-master-# | 3 | Standard_D4s_v3 | 4 | 16
 Infra Nodes | ocp-infra-# | 3 | Standard_D4s_v3 | 4 | 16   
 App Nodes | ocp-app-# | 3 | Standard_D2S_v3 | 2 | 8  
 CNS Nodes | ocp-cns-# | 3 | Standard_D8s_v3 | 8 | 32 
-Bastion | | 1 | Standard_D1 | 1 | 3.5
+Bastion | bastion | 1 | Standard_D1 | 1 | 3.5
 Total | | 13 | | 55 | 219.5Gb 
 
 >After installing and setting up Azure CLI the following command can be used to show available VM Resources in a location.

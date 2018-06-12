@@ -746,6 +746,12 @@ when: deploy_cns | default(true) | bool
     dest: hosts
     backup: yes
 
+- name: Azure | SSH config file exists with proper permissions
+  file:
+    state: touch
+    path: ~/.ssh/config
+    mode: 0600
+
 - name: Azure | update SSH proxy config
   blockinfile:
     create: yes

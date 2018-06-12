@@ -37,7 +37,7 @@
   redhat_subscription:
     state: present
     username: "{{ rhsm_user }}"
-    pasword: "{{ rhsm_pass }}"
+    password: "{{ rhsm_pass }}"
     pool_ids: "{{ rhsm_broker_pool }}"
   register: task_result
   serial: 5

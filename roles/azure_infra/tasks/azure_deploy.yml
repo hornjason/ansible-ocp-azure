@@ -700,7 +700,7 @@
       managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
 
-when: deploy_cns | default(true) | bool
+  when: deploy_cns | default(true) | bool
 
 - name: Azure | Manage Bastion VM
   azure_rm_virtualmachine:

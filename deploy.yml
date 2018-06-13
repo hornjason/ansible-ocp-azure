@@ -22,7 +22,7 @@
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
   tags: ocp
-  `
+  
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   tags: ocp

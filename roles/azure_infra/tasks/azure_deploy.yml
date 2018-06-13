@@ -699,6 +699,7 @@
       disk_size_gb: 512
       managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
+  
   when: deploy_cns | default(true) | bool
 
 - name: Azure | Manage Bastion VM
@@ -744,6 +745,12 @@
     src: hosts.j2
     dest: hosts
     backup: yes
+
+- name: Azure | SSH config file exists with proper permissions
+  file:
+    state: touch
+    path: ~/.ssh/config
+    mode: 0600
 
 - name: Azure | update SSH proxy config
   blockinfile:

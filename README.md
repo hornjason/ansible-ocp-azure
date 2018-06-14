@@ -20,6 +20,18 @@ CNS Nodes | ocp-cns-# | 3 | Standard_D8s_v3 | 8 | 32
 Bastion | bastion | 1 | Standard_D1 | 1 | 3.5
 Total | | 13 | | 55 | 219.5Gb 
 
+VM sizes can be configured from defaults by changing the following variables, if the sizes chosen are below minimum OpenShift requirements deployment checks will fail.
+
+
+| Variable | VM Size
+| -- | ---- |
+| vm_size_master: | Standard_D4s_v3
+| vm_size_infra: | Standard_D4s_v3
+| vm_size_node:  | Standard_D2s_v3
+| vm_size_cns:   |   Standard_D8s_v3
+| vm_size_bastion: | Standard_D1
+
+
 >After installing and setting up Azure CLI the following command can be used to show available VM Resources in a location.
 ```
 az vm list-usage --location westus --output table
@@ -91,6 +103,7 @@ Optional Variables:
 By Default the HTPasswdPasswordIdentityProvider is used but can be customized,  this will be templated out to the ansible hosts file.  By default htpasswd user is added.
 - **openshift_master_htpasswd_users**: - Contains the user: < passwd hash generated from htpasswd -n user >
 - **deploy_cns**: true
+- **deploy_cns_to_infra**: true  - This will deploy CNS on Infra nodes and **NOT** create separate CNS nodes
 - **deploy_metrics**: true
 - **deploy_logging**: true
 - **deploy_prometheus**: true

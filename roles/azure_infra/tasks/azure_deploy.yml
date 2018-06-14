@@ -618,7 +618,7 @@
     state: "{{ state }}"
     name: ocp-master-{{ item }}
     availability_set: ocp-master-instances 
-    vm_size: Standard_D4s_v3
+    vm_size: "{{ vm_size_master }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -672,7 +672,7 @@
     state: "{{ state }}"
     name: ocp-infra-{{ item }}
     availability_set: ocp-infra-instances 
-    vm_size: Standard_D4s_v3
+    vm_size:  "{{ vm_size_infra }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -730,7 +730,7 @@
     state: "{{ state }}"
     name: ocp-app-{{ item }}
     availability_set: ocp-app-instances 
-    vm_size: Standard_D4s_v3
+    vm_size:  "{{ vm_size_node }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -775,7 +775,7 @@
       state: "{{ state }}"
       name: ocp-cns-{{ item }}
       availability_set: ocp-cns-instances 
-      vm_size: Standard_D8s_v3
+      vm_size:  "{{ vm_size_cns }}"
       admin_username: "{{ admin_user }}"
       managed_disk_type: Standard_LRS
       network_interface_names:
@@ -821,7 +821,6 @@
       disk_size_gb: 512
       managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
-
   when: 
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
@@ -831,7 +830,7 @@
     resource_group: "{{ rg }}"
     state: "{{ state }}"
     name: bastion
-    vm_size: Standard_D8s_v3
+    vm_size:  "{{ vm_size_bastion }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:

@@ -16,13 +16,41 @@
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
 
-- name: Azure | Manage subnet
+- name: Azure | Manage Master subnet
   azure_rm_subnet:
-    name: ocp
-    state: present
+    name: master_subnet
+    state: "{{ state }}"
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
-    address_prefix_cidr: "{{ vnet_cidr }}"
+    address_prefix_cidr: "{{ master_subnet_cidr }}"
+
+- name: Azure | Manage Infra subnet
+  azure_rm_subnet:
+    name: infra_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ infra_subnet_cidr }}"
+
+# only create if deploying CNS on separate nodes
+- name: Azure | Manage CNS subnet
+  azure_rm_subnet:
+    name: cns_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ cns_subnet_cidr }}"
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+- name: Azure | Manage App subnet
+  azure_rm_subnet:
+    name: app_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ app_subnet_cidr }}"
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
@@ -215,6 +243,7 @@
           priority: 550
           direction: Inbound
 
+# Only create this NSG if deploying CNS on separate Nodes
 - name: Azure | Manage CNS  Network Security Group
   azure_rm_securitygroup:
     resource_group: "{{ rg }}"
@@ -309,7 +338,84 @@
           access: Allow
           priority: 750
           direction: Inbound
-  when: deploy_cns | default(true) | bool
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+# Update Infra NSG if deploy_cns_on_infra = true
+- name: Azure | Update Infra NSG with CNS rules
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: infra-node-nsg
+    rules:
+        - name: gluster-ssh
+          description: "Gluster SSH"
+          protocol: Tcp
+          destination_port_range: 2222
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 725
+          direction: Inbound
+        - name: gluster-daemon
+          description: "Gluster Daemon"
+          protocol: Tcp
+          destination_port_range: 24008
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 750
+          direction: Inbound
+        - name: gluster-mgmt
+          description: "Gluster Management"
+          protocol: Tcp
+          destination_port_range: 24009
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 775
+          direction: Inbound
+        - name: gluster-client
+          description: "Gluster Clients"
+          protocol: Tcp
+          destination_port_range: 49152-49664
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 800
+          direction: Inbound
+        - name: portmap-tcp
+          description: "Portmap TCP"
+          protocol: Tcp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 825
+          direction: Inbound
+        - name: portmap-udp
+          description: "Portmap UDP"
+          protocol: Udp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 850
+          direction: Inbound
+        - name: gluster-iscsi
+          description: "Gluster ISCSI"
+          protocol: Tcp
+          destination_port_range: 3260
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 875
+          direction: Inbound
+        - name: gluster-block
+          description: "Gluster Blockd"
+          protocol: Tcp
+          destination_port_range: 24010
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 900
+          direction: Inbound
+  when: 
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
 
 # Public IPS
 - name: Azure | Manage Master Public IP
@@ -429,7 +535,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet master_subnet \
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -446,7 +552,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-infra-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet infra_subnet \
   --network-security-group infra-node-nsg \
   --lb-name ocpRouterLB \
   --lb-address-pools RouterBackend \
@@ -463,7 +569,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-app-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet app_subnet \
   --network-security-group node-nsg \
   --internal-dns-name ocp-app-{{ item }} \
   --public-ip-address '' "
@@ -478,7 +584,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-cns-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet cns_subnet \
   --network-security-group cns-nsg \
   --internal-dns-name ocp-cns-{{ item }} \
   --public-ip-address '' "
@@ -488,13 +594,15 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: deploy_cns | default(true) | bool
+  when: 
+    - deploy_cns | default(true) | bool
+    - not  deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Manage Bastion Nic
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet master_subnet \
   --network-security-group bastion-nsg \
   --public-ip-address 'bastion-static' "
   register: nic
@@ -601,6 +709,20 @@
     managed_by: "ocp-infra-{{ item }}"
   loop: "{{ infra_nodes }}"
 
+# Create managed Gluster brick when deploy_cns_on_infra
+# Bricks /dev/sde 
+- name: Azure | Infra CNS mount BRICK managed disk
+  azure_rm_managed_disk:
+    name: "ocp-cns-volume-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 512
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
+  when: 
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
 
 - name: Azure | Manage App VMs
   azure_rm_virtualmachine:
@@ -699,8 +821,9 @@
       disk_size_gb: 512
       managed_by: "ocp-cns-{{ item }}"
     loop: "{{ cns_nodes }}"
-  
-  when: deploy_cns | default(true) | bool
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Manage Bastion VM
   azure_rm_virtualmachine:
@@ -769,6 +892,4 @@
     
 - name: Refresh inventory to ensure new instaces exist in inventory
   meta: refresh_inventory
-
-
 

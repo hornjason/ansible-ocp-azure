@@ -59,7 +59,11 @@ bastion_pkgs:
 # Network
 #######################
 vnet_name: "{{ rg }}vnet"
-vnet_cidr: "10.0.0.0/16"
+vnet_cidr: "192.168.0.0/16"
+master_subnet_cidr: "192.168.0.0/27"
+infra_subnet_cidr: "192.168.0.32/27"
+cns_subnet_cidr: "192.168.0.64/27"
+app_subnet_cidr: "192.168.0.128/25"
 
 api_port: 443
 
@@ -73,6 +77,15 @@ masterlb_dns: "{{ rg }}"
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
 #masterlb_dns: "{{ rg }}"
+
+#######################
+## nodes
+########################
+#master_nodes: [1,2,3]
+#infra_nodes:  [1,2,3]
+#app_nodes:    [1,2,3]
+#cns_nodes:    [1,2,3]
+
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 
@@ -91,6 +104,7 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
+deploy_cns_on_infra: true
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true

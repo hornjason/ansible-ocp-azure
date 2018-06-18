@@ -15,7 +15,8 @@ admin_privkey: '~/.ssh/id_rsa'
 sp_name: ''
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
 sp_secret: ''
-  
+
+
 #######################
 # RHSM 
 # Username / Password or
@@ -43,10 +44,22 @@ bastion_pkgs:
   - screen
 
 #######################
+# Custom Named Certs
+#######################
+# Router
+router_cert: '{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/vagrant/keys/domain.key"}'
+# Master
+master_cert:'[{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/path/to/key/domain.key", "names": ["openshift.console.domain.name"]}]'
+
+#######################
 # Network
 #######################
 vnet_name: "{{ rg }}vnet"
-vnet_cidr: "10.0.0.0/16"
+vnet_cidr: "192.168.0.0/24"
+master_subnet_cder: "192.168.0.0/27"
+infra_subnet_cder:  "192.168.0.32/27"
+cns_subnet_cder:    "192.168.0.64/27"
+app_subnet_cder:    "192.168.0.128/25"
 
 api_port: 443
 
@@ -87,6 +100,7 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
+deploy_cns_on_infra: false
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true

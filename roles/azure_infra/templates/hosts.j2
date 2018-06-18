@@ -21,6 +21,12 @@ openshift_storage_glusterfs_s3_image=registry.access.redhat.com/rhgs3/rhgs-glust
 
 # Gluster Default SC
 openshift_storage_glusterfs_storageclass_default=true
+{% else %}
+# StorageClass if not CNS
+openshift_storageclass_default=true
+openshift_storageclass_name=azure-storage
+openshift_storageclass_provisioner='kubernetes.io/azure-disk'
+openshift_storageclass_parameters={'storageaccounttype': 'Standard_LRS', 'kind': 'managed'}
 {% endif %}
 
 ansible_ssh_user=cloud-user
@@ -39,7 +45,21 @@ openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
 deployment_type=openshift-enterprise
 
+{% if router_cert is defined %}
+####################
+## custom certs
+## Router
+#####################
+openshift_hosted_router_certificate={{ router_cert }}
+{% endif %}
+
+{% if master_cert is defined %}
+# MASTER/API
+openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates={{ master_cert }}
+{% endif %}
 {% if openshift_master_identity_providers is defined %}
+
 openshift_master_identity_providers={{ openshift_master_identity_providers }}
 {% else %}
 openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
@@ -74,14 +94,18 @@ openshift_hosted_registry_storage_azure_blob_realm=core.windows.net
 openshift_logging_install_logging=true
 openshift_logging_es_pvc_size={{ logging_volume_size | default('100Gi') }}
 openshift_logging_es_pvc_dynamic=True
+{% else %}
+openshift_logging_install_logging=true
 {% endif %}
 
 {% if deploy_metrics | default(true) | bool %}
 # metrics
-openshift_metrics_install_metrics=True
+openshift_metrics_install_metrics=true
 openshift_metrics_storage_volume_size={{ metrics_volume_size | default('20Gi') }}
 openshift_metrics_cassandra_storage_type=dynamic
 openshift_metrics_cassandra_replicas="1"
+{% else %}
+openshift_metrics_install_metrics=false
 {% endif %}
 
 {% if deploy_prometheus | default(true) | bool %}
@@ -94,6 +118,8 @@ openshift_prometheus_alertmanager_storage_type=pvc
 openshift_prometheus_alertmanager_pvc_size=10Gi
 openshift_prometheus_alertmanager_pvc_name=alertmanager
 openshift_prometheus_alertbuffer_storage_type=pvc
+{% else %}
+openshift_hosted_prometheus_deploy=false
 {% endif %}
 
 # grafana

@@ -1,16 +1,17 @@
 - name: Azure CLI | Pre-Reqs
   hosts: localhost
+  vars:
+    rhsm_repos:
+      - rhel-7-server-rpms
+      - rhel-7-server-extras-rpms
+      - rhel-7-server-ose-3.9-rpms
+      - rhel-7-fast-datapath-rpms
+      - rhel-7-server-ansible-2.5-rpms
   tasks:
     - name: Enable a RHSM repository
       rhsm_repository:
-        name: "{{ item }}"
+        name: "{{ rhsm_repos }}"
         state: enabled
-      loop:
-        - rhel-7-server-rpms
-        - rhel-7-server-extras-rpms
-        - rhel-7-server-ose-3.9-rpms
-        - rhel-7-fast-datapath-rpms
-        - rhel-7-server-ansible-2.5-rpms
 
     - name: Import Microsft RPM key
       rpm_key:

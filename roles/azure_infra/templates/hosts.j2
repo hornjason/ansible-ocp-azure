@@ -6,6 +6,7 @@ nodes
 {% if deploy_cns | default(true) | bool %}
 glusterfs
 {% endif %}
+
 [OSEv3:vars]
 # fix for bug
 # https://access.redhat.com/solutions/3480921
@@ -155,7 +156,7 @@ ocp-infra-{{ i }}  openshift_node_labels="{'region': 'infra'}" openshift_hostnam
 ocp-app-{{ i }} openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-{{ i }}
 {% endfor %}
 
-{% if deploy_cns | default(true) | bool %}
+{% if deploy_cns | default(true) | bool and not deploy_cns_on_infra | default(false) | bool %}
 {% for i in cns_nodes %}
 ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
 {% endfor %}
@@ -163,8 +164,14 @@ ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
 
 {% if deploy_cns | default(true) | bool %}
 [glusterfs]
+{% if not deploy_cns_on_infra | default(false) | bool %}
 {% for i in cns_nodes %}
 ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/sde" ]'
 {% endfor %}
+{% else %}
+{% for i in infra_nodes %}
+ocp-infra-{{ i }} glusterfs_devices='[ "/dev/sde" ]'
+{% endfor %}
+{% endif %}
 {% endif %}
 

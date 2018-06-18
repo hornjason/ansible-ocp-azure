@@ -13,6 +13,17 @@ app_nodes:    [1,2,3]
 cns_nodes:    [1,2,3]
 
 #######################
+# vm sizes (adapt)
+# az vm list-sizes -l <region> -o table
+#######################
+
+vm_size_master: Standard_D3
+vm_size_infra:  Standard_D2
+vm_size_node:   Standard_D2
+vm_size_cns:    Standard_D4s_v3
+vm_size_bastion: Standard_A2_v2
+
+#######################
 # SSH user for all VMs created
 #######################
 admin_user: cloud-user
@@ -59,7 +70,11 @@ bastion_pkgs:
 # Network
 #######################
 vnet_name: "{{ rg }}vnet"
-vnet_cidr: "10.0.0.0/16"
+vnet_cidr: "192.168.0.0/16"
+master_subnet_cidr: "192.168.0.0/27"
+infra_subnet_cidr: "192.168.0.32/27"
+cns_subnet_cidr: "192.168.0.64/27"
+app_subnet_cidr: "192.168.0.128/25"
 
 api_port: 443
 
@@ -73,6 +88,15 @@ masterlb_dns: "{{ rg }}"
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
 #masterlb_dns: "{{ rg }}"
+
+#######################
+## nodes
+########################
+#master_nodes: [1,2,3]
+#infra_nodes:  [1,2,3]
+#app_nodes:    [1,2,3]
+#cns_nodes:    [1,2,3]
+
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 

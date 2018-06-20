@@ -2,24 +2,28 @@
   shell: az account show -o tsv --query 'id'
   register: subscription_id
   changed_when: false
+  run_once: true
   delegate_to: localhost
 
 - name: azure subscription name
   shell: az account show -o tsv --query 'name'
   register: subscription_name
   changed_when: false
+  run_once: true
   delegate_to: localhost
 
 - name: azure tenant ID
   shell: az account show -o tsv --query 'tenantId'
   register: tenant_id
   changed_when: false
+  run_once: true
   delegate_to: localhost
 
 - name: azure ServicePrincipal ID
   shell: az ad app show --id "http://{{sp_name}}" -o tsv --query 'appId'
   register: sp_id
   changed_when: false
+  run_once: true
   delegate_to: localhost
 
 - name: Ensure /etc/origin/cloudprovider exists

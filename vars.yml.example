@@ -10,6 +10,7 @@ rg: "test"
 master_nodes: [1,2,3]
 infra_nodes:  [1,2,3]
 app_nodes:    [1,2,3]
+# Min of 3 required and add odd nums only for CNS
 cns_nodes:    [1,2,3]
 
 #######################
@@ -90,8 +91,8 @@ router_lb_public_ip: "routerExternalLB"
 #masterlb_dns: "{{ rg }}"
 
 #######################
-## nodes
-########################
+# nodes
+#######################
 #master_nodes: [1,2,3]
 #infra_nodes:  [1,2,3]
 #app_nodes:    [1,2,3]
@@ -99,6 +100,16 @@ router_lb_public_ip: "routerExternalLB"
 
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"
+
+
+#######################
+# Custom Named Certs
+#######################
+# Router
+#router_cert: '{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/vagrant/keys/domain.key"}'
+## Master
+#master_cert: '[{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/path/to/key/domain.key", "names": ["openshift.console.domain.name"]}]'
+
 
 #######################
 # OCP Identity

@@ -47,9 +47,9 @@ bastion_pkgs:
 # Custom Named Certs
 #######################
 # Router
-router_cert: '{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/vagrant/keys/domain.key"}'
+#router_cert: '{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/vagrant/keys/domain.key"}'
 # Master
-master_cert:'[{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/path/to/key/domain.key", "names": ["openshift.console.domain.name"]}]'
+#master_cert: '[{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/path/to/key/domain.key", "names": ["openshift.console.domain.name"]}]'
 
 #######################
 # Network

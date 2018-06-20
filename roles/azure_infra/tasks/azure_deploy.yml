@@ -517,7 +517,19 @@
     - "ocp-master-instances"
     - "ocp-infra-instances"
     - "ocp-app-instances"
-    - "ocp-cns-instances"
+
+# availablity Set for CNS Only
+- name: Azure | Manage CNS Availability Set
+  azure_rm_availabilityset:
+    name: ocp-cns-instances
+    state: "{{ state }}"
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    platform_fault_domain_count: 2
+    sku: Aligned
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
 
 # create VM Nics
 # Lacks ability for adding Nics to backend pool of LB

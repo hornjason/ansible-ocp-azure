@@ -12,16 +12,16 @@
   vars:
     container_runtime_docker_storage_type: overlay2
     container_runtime_docker_storage_setup_device: /dev/sdd
-  tags: ocp
+  tags: ocp-pre
 
 - name: call openshift deploy_cluster play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
-  tags: ocp
+  tags: ocp-deploy
 
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
-  tags: ocp
+  tags: logging-metrics
   
 - hosts: localhost
   tasks:
@@ -31,7 +31,7 @@
         state: latest
       notify:
         - add cluster-admin
-      tags: ocp
+      tags: ocp-post
  
     - name: copy kube config
       fetch:
@@ -41,9 +41,9 @@
       delegate_to: "{{ groups.masters[0] }}"
       notify:
         - add cluster-admin
-      tags: ocp
+      tags: ocp-post
  
   handlers:
     - name: add cluster-admin
-      shell: oc adm policy add-cluster-role-to-user cluster-admin "{{ admin_user }}"
+      shell: oc adm policy add-cluster-role-to-user cluster-admin admin
  

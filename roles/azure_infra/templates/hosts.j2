@@ -2,16 +2,15 @@
 masters
 etcd
 nodes
-# cns
-{% if deploy_cns | default(true) | bool %}
 glusterfs
-{% endif %}
 
 [OSEv3:vars]
 # fix for bug
 # https://access.redhat.com/solutions/3480921
 oreg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
 oreg_url_node=registry.access.redhat.com/openshift3/ose-${component}:${version}
+
+openshift_examples_modify_imagestreams=true
 
 {% if deploy_cns | default(true) | bool %}
 # CNS Bug https://bugzilla.redhat.com/show_bug.cgi?id=1581622
@@ -26,7 +25,7 @@ openshift_storage_glusterfs_storageclass_default=true
 # StorageClass if not CNS
 openshift_storageclass_default=true
 openshift_storageclass_name=azure-storage
-openshift_storageclass_provisioner='kubernetes.io/azure-disk'
+openshift_storageclass_provisioner=azure-disk
 openshift_storageclass_parameters={'storageaccounttype': 'Standard_LRS', 'kind': 'managed'}
 {% endif %}
 
@@ -44,7 +43,8 @@ openshift_master_cluster_method=native
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
-deployment_type=openshift-enterprise
+openshift_deployment_type=openshift-enterprise
+openshift_release=v3.9
 
 {% if router_cert is defined %}
 ####################
@@ -162,8 +162,8 @@ ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
 {% endfor %}
 {% endif %}
 
-{% if deploy_cns | default(true) | bool %}
 [glusterfs]
+{% if deploy_cns | default(true) | bool %} 
 {% if not deploy_cns_on_infra | default(false) | bool %}
 {% for i in cns_nodes %}
 ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/sde" ]'
@@ -174,4 +174,3 @@ ocp-infra-{{ i }} glusterfs_devices='[ "/dev/sde" ]'
 {% endfor %}
 {% endif %}
 {% endif %}
-

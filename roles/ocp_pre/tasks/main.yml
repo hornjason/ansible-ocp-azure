@@ -1,5 +1,15 @@
 ---
 # tasks file for ocp_pre
+# Remove in 3.10+
+- name: Azure | Add azure default storage class
+  lineinfile:
+    path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
+    state: present
+    regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
+    line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
+  delegate_to: localhost
+  when: not deploy_cns |default(true) | bool
+  tags: sc
 
 - name: Azure | Import cloudprovider.yml
   include_tasks: cloudprovider.yml

@@ -9,9 +9,6 @@
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
-  vars:
-    container_runtime_docker_storage_type: overlay2
-    container_runtime_docker_storage_setup_device: /dev/sdd
   tags: ocp-pre
 
 - name: call openshift deploy_cluster play
@@ -24,6 +21,8 @@
   tags: logging-metrics
   
 - hosts: localhost
+  vars:
+    admin_user: "{{ openshift_master_htpasswd_users.keys() }}"
   tasks:
     - name: Install oc client
       yum:
@@ -45,5 +44,5 @@
  
   handlers:
     - name: add cluster-admin
-      shell: oc adm policy add-cluster-role-to-user cluster-admin admin
+      shell: oc adm policy add-cluster-role-to-user cluster-admin "{{ admin_user }}"
  

@@ -77,6 +77,12 @@ openshift_master_manage_htpasswd=true
 openshift_node_local_quota_per_fsgroup=512Mi
 networkPluginName=redhat/openshift-ovs-multitenant
 
+# Docker
+container_runtime_docker_storage_setup_device=/dev/sdd
+container_runtime_docker_storage_type=overlay2
+openshift_docker_use_system_container=False
+openshift_use_system_containers=False
+
 # disable cockpit
 osm_use_cockpit=false
 # Do not uninstall service catalog until post installation. Needs storage class object

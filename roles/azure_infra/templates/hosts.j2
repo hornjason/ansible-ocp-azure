@@ -101,8 +101,12 @@ openshift_hosted_registry_storage_azure_blob_realm=core.windows.net
 openshift_logging_install_logging=true
 openshift_logging_es_pvc_size={{ logging_volume_size | default('100Gi') }}
 openshift_logging_es_pvc_dynamic=True
+openshift_logging_es_nodeselector={"region": "infra"}
+openshift_logging_kibana_nodeselector={"region": "infra"}
+openshift_logging_curator_nodeselector={"region": "infra"}
+openshift_logging_es_cluster_size=3
 {% else %}
-openshift_logging_install_logging=true
+openshift_logging_install_logging=false
 {% endif %}
 
 {% if deploy_metrics | default(true) | bool %}
@@ -111,6 +115,9 @@ openshift_metrics_install_metrics=true
 openshift_metrics_storage_volume_size={{ metrics_volume_size | default('20Gi') }}
 openshift_metrics_cassandra_storage_type=dynamic
 openshift_metrics_cassandra_replicas="1"
+openshift_metrics_hawkular_nodeselector={"region":"infra"}
+openshift_metrics_cassandra_nodeselector={"region":"infra"}
+openshift_metrics_heapster_nodeselector={"region":"infra"}
 {% else %}
 openshift_metrics_install_metrics=false
 {% endif %}

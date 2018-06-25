@@ -47,6 +47,7 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
 ```
     sudo subscription-manager register --username < username > --password < password >
     sudo subscription-manager attach --pool < pool_id >
+    sudo subscription-manager repos --disable=*
     sudo subscription-manager repos \
     --enable="rhel-7-server-rpms" \
     --enable="rhel-7-server-extras-rpms" \

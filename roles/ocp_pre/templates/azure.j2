@@ -1,7 +1,9 @@
 tenantId: {{ tenant_id.stdout }}
 subscriptionId: {{ subscription_id.stdout }}
-aadClientId: {{ sp_id.stdout }}
+aadClientId: {{ sp_app_id }}
+{% if defined sp_secret and sp_secret != '' %}
 aadClientSecret: {{ sp_secret }}
+{% endif %}
 aadTenantID: {{ tenant_id.stdout }}
 resourceGroup: {{ rg }}
 cloud: AzurePublicCloud

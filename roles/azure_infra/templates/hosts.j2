@@ -29,7 +29,7 @@ openshift_storageclass_provisioner=azure-disk
 openshift_storageclass_parameters={'storageaccounttype': 'Standard_LRS', 'kind': 'managed'}
 {% endif %}
 
-ansible_ssh_user=cloud-user
+ansible_ssh_user="{{ admin_user }}"
 ansible_become=true
 openshift_cloudprovider_kind=azure
 osm_controller_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf']}

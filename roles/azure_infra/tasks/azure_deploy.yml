@@ -858,13 +858,10 @@
       version: latest
 
 # Registry 
-- set_fact: 
-    registry_storage_account: "{{ rg | regex_replace('-') }}"
-
 - name: Azure | Manage Registry Storage Account
   azure_rm_storageaccount:
     resource_group: "{{ rg }}"
-    name: "{{ rg | regex_replace('-') }}"
+    name: "{{ registry_storage_account }}"
     state: "{{ state }}"
     location: "{{ location }}"
     account_type: Standard_LRS

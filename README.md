@@ -20,6 +20,7 @@ CNS Nodes | ocp-cns-# | 3 | Standard_D8s_v3 | 8 | 32
 Bastion | bastion | 1 | Standard_D1 | 1 | 3.5
 Total | | 13 | | 55 | 219.5Gb 
 
+
 VM sizes can be configured from defaults by changing the following variables, if the sizes chosen are below minimum OpenShift requirements deployment checks will fail.
 
 
@@ -59,6 +60,7 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
 ```
 
  2. Clone this repository
+
  ```
  git clone https://github.com/hornjason/ansible-ocp-azure.git; cd ansible-ocp-azure
  ```

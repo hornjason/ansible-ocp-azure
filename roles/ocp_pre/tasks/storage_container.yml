@@ -2,18 +2,15 @@
    filesystem:
      fstype: xfs
      dev: /dev/sdc
-   delegate_to: "{{ item }}"
 
  - name: Set proper permissions on mount point
    file:
      path: /var/lib/origin/openshift.local.volumes
      state: directory
      mode: 0755
-   delegate_to: "{{ item }}"
 
  - name: Restore SELinux context
    command: restorecon -R /var/lib/origin/openshift.local.volumes
-   delegate_to: "{{ item }}"
    changed_when: False
  
  - name: Mount XFS filesystem
@@ -23,4 +20,3 @@
      src: /dev/sdc
      fstype: xfs
      opts: gquota
-   delegate_to: "{{ item }}"

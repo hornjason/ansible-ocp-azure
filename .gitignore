@@ -1,0 +1,4 @@
+**hosts
+*.retry
+vars.yml
+**.log

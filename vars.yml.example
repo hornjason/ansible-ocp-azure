@@ -10,7 +10,19 @@ rg: "test"
 master_nodes: [1,2,3]
 infra_nodes:  [1,2,3]
 app_nodes:    [1,2,3]
+# Min of 3 required and add odd nums only for CNS
 cns_nodes:    [1,2,3]
+
+#######################
+# vm sizes (adapt)
+# az vm list-sizes -l <region> -o table
+#######################
+
+vm_size_master: Standard_D3
+vm_size_infra:  Standard_D2
+vm_size_node:   Standard_D2
+vm_size_cns:    Standard_D4s_v3
+vm_size_bastion: Standard_A2_v2
 
 #######################
 # SSH user for all VMs created
@@ -24,10 +36,11 @@ admin_privkey: '~/.ssh/id_rsa'
 #######################
 # Service Principal 
 #######################
+# This is used to template the cloud config file on each node for azure
 sp_name: devops
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
 sp_secret: 'password'
-  
+sp_app_id: 'dfdffdfa0103'
 #######################
 # RHSM 
 # Username / Password or
@@ -58,7 +71,11 @@ bastion_pkgs:
 # Network
 #######################
 vnet_name: "{{ rg }}vnet"
-vnet_cidr: "10.0.0.0/16"
+vnet_cidr: "192.168.0.0/16"
+master_subnet_cidr: "192.168.0.0/27"
+infra_subnet_cidr: "192.168.0.32/27"
+cns_subnet_cidr: "192.168.0.64/27"
+app_subnet_cidr: "192.168.0.128/25"
 
 api_port: 443
 
@@ -72,14 +89,33 @@ masterlb_dns: "{{ rg }}"
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
 #masterlb_dns: "{{ rg }}"
+
+#######################
+# nodes
+#######################
+#master_nodes: [1,2,3]
+#infra_nodes:  [1,2,3]
+#app_nodes:    [1,2,3]
+#cns_nodes:    [1,2,3]
+
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"
+
+
+#######################
+# Custom Named Certs
+#######################
+# Router
+#router_cert: '{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/vagrant/keys/domain.key"}'
+## Master
+#master_cert: '[{"cafile": "/path/to/ca_cert", "certfile": "/path/to/fullchain.cer", "keyfile": "/path/to/key/domain.key", "names": ["openshift.console.domain.name"]}]'
+
 
 #######################
 # OCP Identity
 # Use 'htpasswd -n <user>' to generate password hash. (htpasswd from httpd-tools RPM)
 #######################
-# Example with admin:redhat
+# Example with admin:changeme
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
 openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
 
@@ -90,6 +126,7 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
+deploy_cns_on_infra: false
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true

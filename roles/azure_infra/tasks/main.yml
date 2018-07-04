@@ -1,21 +1,8 @@
 ---
 - name: Azure | Import azure_deploy.yml
   include_tasks: azure_deploy.yml
+  tags: deploy
 
 - name: Azure | Import bastion.yml
   include_tasks: bastion.yml
-  
-- name: Azure | Import cloudprovider.yml
-  include_tasks: cloudprovider.yml
-  loop: "{{ groups['masters'] }}"
-
-- name: Azure | Import subscribe.yml
-  include_tasks: subscribe.yml
-
-- name: Azure | Import storage_container.yml
-  include_tasks: storage_container.yml
-  loop: "{{ groups['nodes'] }}"
-
-- name: Azure | Import storage_etcd.yml
-  include_tasks: storage_etcd.yml
-  loop: "{{ groups['masters'] }}"
+ 

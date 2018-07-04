@@ -15,19 +15,19 @@
           shell:  az vm list -g "{{ rg }}" --query "[].name" -o tsv
           register: vm_list
         
-        - name: Azure | RHSM unregister
-          redhat_subscription:
-            state: absent
-          delegate_to: "{{ item }}"
-          loop: "{{ vm_list.stdout_lines }}"
+          #        - name: Azure | RHSM unregister
+          #redhat_subscription:
+            #  state: absent
+            #delegate_to: "{{ item }}"
+            #loop: "{{ vm_list.stdout_lines }}"
 
-        #- name: Unregister VMs
-          #command: "az vm run-command invoke -g {{ rg }}  -n {{ item }} --command-id RunShellScript --script 'sudo subscription-manager unregister'"
-        #  failed_when: "'FAILED' in unregister.stderr"
-        #  register: unregister
-        #  when: not skip|bool
-        #  with_items:
-        #    - "{{ vm_list.stdout_lines }}"
+        - name: Unregister VMs
+          command: "az vm run-command invoke -g {{ rg }}  -n {{ item }} --command-id RunShellScript --script 'sudo subscription-manager unregister'"
+          failed_when: "'FAILED' in unregister.stderr"
+          register: unregister
+          when: not skip|bool
+          with_items:
+            - "{{ vm_list.stdout_lines }}"
     
         - name: Destroy Azure | Delete VMs
           azure_rm_virtualmachine:

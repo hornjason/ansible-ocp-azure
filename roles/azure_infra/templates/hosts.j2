@@ -2,17 +2,35 @@
 masters
 etcd
 nodes
-# cns
-{% if deploy_cns | default(true) | bool %}
 glusterfs
-{% endif %}
+
 [OSEv3:vars]
 # fix for bug
 # https://access.redhat.com/solutions/3480921
 oreg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
 oreg_url_node=registry.access.redhat.com/openshift3/ose-${component}:${version}
 
-ansible_ssh_user=cloud-user
+
+openshift_examples_modify_imagestreams=true
+
+{% if deploy_cns | default(true) | bool %}
+# CNS Bug https://bugzilla.redhat.com/show_bug.cgi?id=1581622
+openshift_storage_glusterfs_heketi_image=registry.access.redhat.com/rhgs3/rhgs-volmanager-rhel7
+openshift_storage_glusterfs_image=registry.access.redhat.com/rhgs3/rhgs-server-rhel7
+openshift_storage_glusterfs_block_image=registry.access.redhat.com/rhgs3/rhgs-gluster-block-prov-rhel7
+openshift_storage_glusterfs_s3_image=registry.access.redhat.com/rhgs3/rhgs-gluster-s3-server-rhel7# 
+
+# Gluster Default SC
+openshift_storage_glusterfs_storageclass_default=true
+{% else %}
+# StorageClass if not CNS
+openshift_storageclass_default=true
+openshift_storageclass_name=azure-storage
+openshift_storageclass_provisioner=azure-disk
+openshift_storageclass_parameters={'storageaccounttype': 'Standard_LRS', 'kind': 'managed'}
+{% endif %}
+
+ansible_ssh_user="{{ admin_user }}"
 ansible_become=true
 openshift_cloudprovider_kind=azure
 osm_controller_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf']}
@@ -26,8 +44,24 @@ openshift_master_cluster_method=native
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
-deployment_type=openshift-enterprise
+openshift_deployment_type=openshift-enterprise
+openshift_release=v3.9
+
+{% if router_cert is defined %}
+####################
+## custom certs
+## Router
+#####################
+openshift_hosted_router_certificate={{ router_cert }}
+{% endif %}
+
+{% if master_cert is defined %}
+# MASTER/API
+openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates={{ master_cert }}
+{% endif %}
 {% if openshift_master_identity_providers is defined %}
+
 openshift_master_identity_providers={{ openshift_master_identity_providers }}
 {% else %}
 openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
@@ -44,14 +78,16 @@ openshift_master_manage_htpasswd=true
 openshift_node_local_quota_per_fsgroup=512Mi
 networkPluginName=redhat/openshift-ovs-multitenant
 
+# Docker
+container_runtime_docker_storage_setup_device=/dev/sdd
+container_runtime_docker_storage_type=overlay2
+openshift_docker_use_system_container=False
+openshift_use_system_containers=False
+
+# disable cockpit
+osm_use_cockpit=false
 # Do not uninstall service catalog until post installation. Needs storage class object
 openshift_enable_service_catalog=false
-
-# Gluster Default SC
-{% if deploy_cns | default(true) | bool %}
-openshift_storage_glusterfs_storageclass_default=true
-{% endif %}
-
 
 # Setup azure blob registry storage
 openshift_hosted_registry_storage_kind=object
@@ -66,14 +102,25 @@ openshift_hosted_registry_storage_azure_blob_realm=core.windows.net
 openshift_logging_install_logging=true
 openshift_logging_es_pvc_size={{ logging_volume_size | default('100Gi') }}
 openshift_logging_es_pvc_dynamic=True
+openshift_logging_es_nodeselector={"region": "infra"}
+openshift_logging_kibana_nodeselector={"region": "infra"}
+openshift_logging_curator_nodeselector={"region": "infra"}
+openshift_logging_es_cluster_size=3
+{% else %}
+openshift_logging_install_logging=false
 {% endif %}
 
 {% if deploy_metrics | default(true) | bool %}
 # metrics
-openshift_metrics_install_metrics=True
+openshift_metrics_install_metrics=true
 openshift_metrics_storage_volume_size={{ metrics_volume_size | default('20Gi') }}
 openshift_metrics_cassandra_storage_type=dynamic
 openshift_metrics_cassandra_replicas="1"
+openshift_metrics_hawkular_nodeselector={"region":"infra"}
+openshift_metrics_cassandra_nodeselector={"region":"infra"}
+openshift_metrics_heapster_nodeselector={"region":"infra"}
+{% else %}
+openshift_metrics_install_metrics=false
 {% endif %}
 
 {% if deploy_prometheus | default(true) | bool %}
@@ -86,6 +133,8 @@ openshift_prometheus_alertmanager_storage_type=pvc
 openshift_prometheus_alertmanager_pvc_size=10Gi
 openshift_prometheus_alertmanager_pvc_name=alertmanager
 openshift_prometheus_alertbuffer_storage_type=pvc
+{% else %}
+openshift_hosted_prometheus_deploy=false
 {% endif %}
 
 # grafana
@@ -94,40 +143,48 @@ openshift_grafana_node_exporter=true
 openshift_grafana_storage_type=pvc
 
 [masters]
-ocp-master-1
-ocp-master-2
-ocp-master-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}
+{% endfor %}
 
 [infra]
-ocp-infra-1
-ocp-infra-2
-ocp-infra-3
+{% for i in infra_nodes %}
+ocp-infra-{{ i }}
+{% endfor %}
 
 [etcd]
-ocp-master-1
-ocp-master-2
-ocp-master-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}
+{% endfor %}
 
 [nodes]
-ocp-master-1 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-1
-ocp-master-2 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-2
-ocp-master-3 openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-3
-ocp-infra-1 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-1
-ocp-infra-2 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-2
-ocp-infra-3 openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-3
-ocp-app-1 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-1
-ocp-app-2 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-2
-ocp-app-3 openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-3
-{% if deploy_cns | default(true) | bool %}
-ocp-cns-1 openshift_schedulable=True openshift_hostname=ocp-cns-1
-ocp-cns-2 openshift_schedulable=True openshift_hostname=ocp-cns-2
-ocp-cns-3 openshift_schedulable=True openshift_hostname=ocp-cns-3
+{% for i in master_nodes %}
+ocp-master-{{ i }}  openshift_node_labels="{'region': 'master'}" openshift_hostname=ocp-master-{{ i }}
+{% endfor %}
+
+{% for i in infra_nodes %}
+ocp-infra-{{ i }}  openshift_node_labels="{'region': 'infra'}" openshift_hostname=ocp-infra-{{ i }}
+{% endfor %}
+
+{% for i in app_nodes %}
+ocp-app-{{ i }} openshift_node_labels="{'region': 'apps'}" openshift_hostname=ocp-app-{{ i }}
+{% endfor %}
+
+{% if deploy_cns | default(true) | bool and not deploy_cns_on_infra | default(false) | bool %}
+{% for i in cns_nodes %}
+ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
+{% endfor %}
 {% endif %}
 
-{% if deploy_cns | default(true) | bool %}
 [glusterfs]
-ocp-cns-1 glusterfs_devices='[ "/dev/sde" ]'
-ocp-cns-2 glusterfs_devices='[ "/dev/sde" ]'
-ocp-cns-3 glusterfs_devices='[ "/dev/sde" ]'
+{% if deploy_cns | default(true) | bool %} 
+{% if not deploy_cns_on_infra | default(false) | bool %}
+{% for i in cns_nodes %}
+ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/sde" ]'
+{% endfor %}
+{% else %}
+{% for i in infra_nodes %}
+ocp-infra-{{ i }} glusterfs_devices='[ "/dev/sde" ]'
+{% endfor %}
 {% endif %}
-
+{% endif %}

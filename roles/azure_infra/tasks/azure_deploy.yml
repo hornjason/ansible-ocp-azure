@@ -16,13 +16,41 @@
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
 
-- name: Azure | Manage subnet
+- name: Azure | Manage Master subnet
   azure_rm_subnet:
-    name: ocp
-    state: present
+    name: master_subnet
+    state: "{{ state }}"
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
-    address_prefix_cidr: "{{ vnet_cidr }}"
+    address_prefix_cidr: "{{ master_subnet_cidr }}"
+
+- name: Azure | Manage Infra subnet
+  azure_rm_subnet:
+    name: infra_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ infra_subnet_cidr }}"
+
+# only create if deploying CNS on separate nodes
+- name: Azure | Manage CNS subnet
+  azure_rm_subnet:
+    name: cns_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ cns_subnet_cidr }}"
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+- name: Azure | Manage App subnet
+  azure_rm_subnet:
+    name: app_subnet
+    state: "{{ state }}"
+    virtual_network_name: "{{ vnet_name }}"
+    resource_group: "{{ rg }}"
+    address_prefix_cidr: "{{ app_subnet_cidr }}"
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
@@ -215,6 +243,7 @@
           priority: 550
           direction: Inbound
 
+# Only create this NSG if deploying CNS on separate Nodes
 - name: Azure | Manage CNS  Network Security Group
   azure_rm_securitygroup:
     resource_group: "{{ rg }}"
@@ -309,7 +338,84 @@
           access: Allow
           priority: 750
           direction: Inbound
-  when: deploy_cns | default(true) | bool
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+# Update Infra NSG if deploy_cns_on_infra = true
+- name: Azure | Update Infra NSG with CNS rules
+  azure_rm_securitygroup:
+    resource_group: "{{ rg }}"
+    name: infra-node-nsg
+    rules:
+        - name: gluster-ssh
+          description: "Gluster SSH"
+          protocol: Tcp
+          destination_port_range: 2222
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 725
+          direction: Inbound
+        - name: gluster-daemon
+          description: "Gluster Daemon"
+          protocol: Tcp
+          destination_port_range: 24008
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 750
+          direction: Inbound
+        - name: gluster-mgmt
+          description: "Gluster Management"
+          protocol: Tcp
+          destination_port_range: 24009
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 775
+          direction: Inbound
+        - name: gluster-client
+          description: "Gluster Clients"
+          protocol: Tcp
+          destination_port_range: 49152-49664
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 800
+          direction: Inbound
+        - name: portmap-tcp
+          description: "Portmap TCP"
+          protocol: Tcp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 825
+          direction: Inbound
+        - name: portmap-udp
+          description: "Portmap UDP"
+          protocol: Udp
+          destination_port_range: 111
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 850
+          direction: Inbound
+        - name: gluster-iscsi
+          description: "Gluster ISCSI"
+          protocol: Tcp
+          destination_port_range: 3260
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 875
+          direction: Inbound
+        - name: gluster-block
+          description: "Gluster Blockd"
+          protocol: Tcp
+          destination_port_range: 24010
+          source_address_prefix: VirtualNetwork
+          access: Allow
+          priority: 900
+          direction: Inbound
+  when: 
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
 
 # Public IPS
 - name: Azure | Manage Master Public IP
@@ -411,7 +517,19 @@
     - "ocp-master-instances"
     - "ocp-infra-instances"
     - "ocp-app-instances"
-    - "ocp-cns-instances"
+
+# availablity Set for CNS Only
+- name: Azure | Manage CNS Availability Set
+  azure_rm_availabilityset:
+    name: ocp-cns-instances
+    state: "{{ state }}"
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    platform_fault_domain_count: 2
+    sku: Aligned
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
 
 # create VM Nics
 # Lacks ability for adding Nics to backend pool of LB
@@ -429,7 +547,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet master_subnet \
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -446,7 +564,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-infra-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet infra_subnet \
   --network-security-group infra-node-nsg \
   --lb-name ocpRouterLB \
   --lb-address-pools RouterBackend \
@@ -463,7 +581,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-app-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet app_subnet \
   --network-security-group node-nsg \
   --internal-dns-name ocp-app-{{ item }} \
   --public-ip-address '' "
@@ -478,7 +596,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-cns-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet cns_subnet \
   --network-security-group cns-nsg \
   --internal-dns-name ocp-cns-{{ item }} \
   --public-ip-address '' "
@@ -488,13 +606,15 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: deploy_cns | default(true) | bool
+  when: 
+    - deploy_cns | default(true) | bool
+    - not  deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Manage Bastion Nic
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet ocp \
+  --subnet master_subnet \
   --network-security-group bastion-nsg \
   --public-ip-address 'bastion-static' "
   register: nic
@@ -510,7 +630,7 @@
     state: "{{ state }}"
     name: ocp-master-{{ item }}
     availability_set: ocp-master-instances 
-    vm_size: Standard_D4s_v3
+    vm_size: "{{ vm_size_master }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -524,30 +644,47 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Etcd
-        - lun: 2
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ master_nodes }}" 
 
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | Master node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-container-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32 
+    managed_by: "ocp-master-{{ item }}"
+  loop: "{{ master_nodes }}"
+
+# Docker VG /dev/sdd
+- name: Azure | Master node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-master-{{ item }}"
+  loop: "{{ master_nodes }}"
+
+# ETCD /dev/sde
+- name: Azure | Master node mount ETCD managed disk
+  azure_rm_managed_disk:
+    name: "ocp-master-etcd-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-master-{{ item }}"
+  loop: "{{ master_nodes }}"
+
+# Infra VMs
 - name: Azure | Manage Infra VMs
   azure_rm_virtualmachine:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
     name: ocp-infra-{{ item }}
     availability_set: ocp-infra-instances 
-    vm_size: Standard_D4s_v3
+    vm_size:  "{{ vm_size_infra }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -561,18 +698,43 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ infra_nodes }}" 
+
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | Infra node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-infra-container-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 64
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
+
+# Docker VG /dev/sdd
+- name: Azure | Infra node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-infra-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
+
+# Create managed Gluster brick when deploy_cns_on_infra
+# Bricks /dev/sde 
+- name: Azure | Infra CNS mount BRICK managed disk
+  azure_rm_managed_disk:
+    name: "ocp-cns-volume-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 512
+    managed_by: "ocp-infra-{{ item }}"
+  loop: "{{ infra_nodes }}"
+  when: 
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
 
 - name: Azure | Manage App VMs
   azure_rm_virtualmachine:
@@ -580,7 +742,7 @@
     state: "{{ state }}"
     name: ocp-app-{{ item }}
     availability_set: ocp-app-instances 
-    vm_size: Standard_D4s_v3
+    vm_size:  "{{ vm_size_node }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -594,64 +756,93 @@
       publisher: RedHat
       sku: 7-RAW
       version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
   loop: "{{ app_nodes }}" 
 
-- name: Azure | Manage CNS VMs
-  azure_rm_virtualmachine:
+# create - mount data disk in order above method was unreliable
+# Container Storage for emptydir  /var/lib/origin /dev/sdc
+- name: Azure | App node mount container managed disk
+  azure_rm_managed_disk:
+    name: "ocp-app-container-{{ item }}" 
+    location: "{{ location }}"
     resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-cns-{{ item }}
-    availability_set: ocp-cns-instances 
-    vm_size: Standard_D8s_v3
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-cns-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-    data_disks:
-        # Container Storage for emptydir  /var/lib/origin
-        # /dev/sdc
-        - lun: 0
-          disk_size_gb: 64
-          managed_disk_type: Standard_LRS
-        # Docker VG
-        # /dev/sdd
-        - lun: 1
-          disk_size_gb: 32
-          managed_disk_type: Standard_LRS
-        # Bricks
-        # /dev/sde
-        - lun: 2
-          disk_size_gb: 512
-          managed_disk_type: Premium_LRS
-  loop: "{{ cns_nodes }}" 
-  when: deploy_cns | default(true) | bool
+    disk_size_gb: 64
+    managed_by: "ocp-app-{{ item }}"
+  loop: "{{ app_nodes }}"
+
+# Docker VG /dev/sdd
+- name: Azure | App node mount docker managed disk
+  azure_rm_managed_disk:
+    name: "ocp-app-docker-{{ item }}" 
+    location: "{{ location }}"
+    resource_group: "{{ rg }}"
+    disk_size_gb: 32
+    managed_by: "ocp-app-{{ item }}"
+  loop: "{{ app_nodes }}"
+
+# CNS VMs
+- block:
+  - name: Azure | Manage CNS VMs
+    azure_rm_virtualmachine:
+      resource_group: "{{ rg }}"
+      state: "{{ state }}"
+      name: ocp-cns-{{ item }}
+      availability_set: ocp-cns-instances 
+      vm_size:  "{{ vm_size_cns }}"
+      admin_username: "{{ admin_user }}"
+      managed_disk_type: Standard_LRS
+      network_interface_names:
+        - ocp-cns-{{ item }}VMNic
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/{{ admin_user }}/.ssh/authorized_keys
+          key_data: "{{ admin_pubkey }}"
+      image:
+        offer: RHEL
+        publisher: RedHat
+        sku: 7-RAW
+        version: latest
+    loop: "{{ cns_nodes }}" 
+  
+  # create - mount data disk in order above method was unreliable
+  # Container Storage for emptydir  /var/lib/origin /dev/sdc
+  - name: Azure | CNS node mount container managed disk
+    azure_rm_managed_disk:
+      name: "ocp-cns-container-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 64
+      managed_by: "ocp-cns-{{ item  }}"
+    loop: "{{ cns_nodes }}"
+
+  # Docker VG /dev/sdd
+  - name: Azure | CNS node mount docker managed disk
+    azure_rm_managed_disk:
+      name: "ocp-cns-docker-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 32
+      managed_by: "ocp-cns-{{ item }}"
+    loop: "{{ cns_nodes }}"
+
+  # Bricks /dev/sde 
+  - name: Azure | CNS node mount BRICK managed disk
+    azure_rm_managed_disk:
+      name: "ocp-cns-volume-{{ item }}" 
+      location: "{{ location }}"
+      resource_group: "{{ rg }}"
+      disk_size_gb: 512
+      managed_by: "ocp-cns-{{ item }}"
+    loop: "{{ cns_nodes }}"
+  when: 
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Manage Bastion VM
   azure_rm_virtualmachine:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
     name: bastion
-    vm_size: Standard_D8s_v3
+    vm_size:  "{{ vm_size_bastion }}"
     admin_username: "{{ admin_user }}"
     managed_disk_type: Standard_LRS
     network_interface_names:
@@ -667,13 +858,10 @@
       version: latest
 
 # Registry 
-- set_fact: 
-    registry_storage_account: "{{ rg | regex_replace('-') }}"
-
 - name: Azure | Manage Registry Storage Account
   azure_rm_storageaccount:
     resource_group: "{{ rg }}"
-    name: "{{ rg | regex_replace('-') }}"
+    name: "{{ registry_storage_account }}"
     state: "{{ state }}"
     location: "{{ location }}"
     account_type: Standard_LRS
@@ -690,8 +878,15 @@
     dest: hosts
     backup: yes
 
+- name: Azure | SSH config file exists with proper permissions
+  file:
+    state: touch
+    path: ~/.ssh/config
+    mode: 0600
+
 - name: Azure | update SSH proxy config
   blockinfile:
+    create: yes
     path: ~/.ssh/config
     insertafter: EOF
     block: |
@@ -706,6 +901,4 @@
     
 - name: Refresh inventory to ensure new instaces exist in inventory
   meta: refresh_inventory
-
-
 

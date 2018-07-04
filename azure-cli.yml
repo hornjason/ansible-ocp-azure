@@ -1,12 +1,17 @@
 - name: Azure CLI | Pre-Reqs
   hosts: localhost
+  vars:
+    rhsm_repos:
+      - rhel-7-server-rpms
+      - rhel-7-server-extras-rpms
+      - rhel-7-server-ose-3.9-rpms
+      - rhel-7-fast-datapath-rpms
+      - rhel-7-server-ansible-2.5-rpms
   tasks:
-    #- name: Enable a RHSM repository
-    #  rhsm_repository:
-      #    name: "{{ item }}"
-      #  state: enabled
-      #loop:
-        #  - rhel-7-server-ansible-2.5-rpms
+    - name: Enable a RHSM repository
+      rhsm_repository:
+        name: "{{ rhsm_repos }}"
+        state: enabled
 
     - name: Import Microsft RPM key
       rpm_key:
@@ -27,7 +32,12 @@
         name: "{{ item }}"
         state: latest
       loop:
+        - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        - python2-pip
         - azure-cli
         - ansible
 
+    - name: Install Azure ansible pip modules
+      pip:
+        name: ansible[azure]
 

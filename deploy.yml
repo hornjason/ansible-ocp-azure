@@ -19,6 +19,12 @@
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
   tags: logging-metrics
+
+
+- name: install Grafana
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
+  ignore_errors: true
+  tags: logging-metrics
   
 - hosts: localhost
   vars:

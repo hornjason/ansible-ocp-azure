@@ -9,7 +9,9 @@
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
-  tags: ocp-pre
+  tags:
+    - ocp-pre
+    - ocp-deploy
 
 - name: call openshift deploy_cluster play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
@@ -18,16 +20,27 @@
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
-  tags: logging-metrics
+  tags: 
+    - logging-metrics
+    - ocp-deploy
 
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
-  tags: logging-metrics
+  tags: 
+    - logging-metrics
+    - ocp-deploy
+
+- name: install Grafana
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
+  ignore_errors: true
+  tags:
+    - logging-metrics
+    - ocp-deploy
   
 - hosts: localhost
   vars:
-    admin_user: "{{ openshift_master_htpasswd_users.keys() }}"
+    admin_user: "{{ openshift_master_htpasswd_users.keys() }}" 
   tasks:
     - name: Install oc client
       yum:

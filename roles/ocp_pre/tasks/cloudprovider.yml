@@ -18,17 +18,14 @@
   changed_when: false
   run_once: true
   delegate_to: localhost
-<<<<<<< HEAD:roles/ocp_pre/tasks/cloudprovider.yml
-=======
 
 - name: azure ServicePrincipal ID
   shell: az ad app show --id "http://{{sp_name}}" -o tsv --query 'appId'
-  register: sp_id
+  register: sp_app_id
   changed_when: false
   run_once: true
   delegate_to: localhost
   when: sp_app_id is undefined
->>>>>>> 833c39b8ab71dab00cb449e837c06d3b4e87b647:roles/ocp_pre/tasks/cloudprovider.yml
 
 - name: Ensure /etc/origin/cloudprovider exists
   file:

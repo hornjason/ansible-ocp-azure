@@ -88,6 +88,7 @@ Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive inform
  - **admin_privkey**: - Path to the private ssh key associated with the public key above.  ex. `'~/.ssh/id_rsa`
  - **sp_name**: - Service Principal name created in step 5.
  - **sp_secret**: - Service Principal secret 
+ - **sp_app_id**: - Service Principal APPID
  - **rhsm_user**: - If subscribing to RHSM using username / password, fill in username
  - **rhsm_pass**: - If subscribing to RHSM using username / password, fill in passowrd for RHSM 
  - **rhsm_key**: -  If subscribing to RHSM using activation key and orgId fill in activation key here.

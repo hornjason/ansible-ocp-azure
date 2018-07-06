@@ -39,6 +39,7 @@ rhsm_repos:
 bastion_pkgs:
   - ansible
   - atomic-openshift-utils
+  - atomic-openshift-clients
   - git
   - tmux
   - screen

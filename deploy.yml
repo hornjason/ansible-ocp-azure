@@ -5,7 +5,7 @@
 
 - hosts: nodes
   roles:
-    - { role: ocp_pre, tags: ocp }
+    - { role: ocp_pre, tags: ocp-pre }
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
@@ -19,7 +19,6 @@
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
   ignore_errors: true
   tags: logging-metrics
-
 
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml

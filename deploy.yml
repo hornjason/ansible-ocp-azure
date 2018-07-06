@@ -28,6 +28,7 @@
       yum:
         name: atomic-openshift-clients
         state: latest
+      become: yes
       notify:
         - add cluster-admin
       tags: ocp-post

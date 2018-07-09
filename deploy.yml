@@ -39,16 +39,12 @@
     - ocp-deploy
   
 - hosts: localhost
-  vars:
-    admin_user: "{{ openshift_master_htpasswd_users.keys() }}" 
   tasks:
     - name: Install oc client
       yum:
         name: atomic-openshift-clients
         state: latest
       become: yes
-      notify:
-        - add cluster-admin
       tags: ocp-post
  
     - name: copy kube config
@@ -57,11 +53,17 @@
         dest: "~/.kube/"
         flat: yes
       delegate_to: "{{ groups.masters[0] }}"
-      notify:
-        - add cluster-admin
       tags: ocp-post
  
-  handlers:
+- name: Configure internal master LB
+  import_playbook: activate-internal-lb.yml
+  when: master_lb_private_ip is defined
+
+- hosts: localhost
+  vars:
+    admin_user: "{{ openshift_master_htpasswd_users.keys() }}"
+  tasks:
+    # This only works after the activate-internal-lb.yml playbook has
+    # been run, if an internal Azure load balancer is being used.
     - name: add cluster-admin
-      shell: oc adm policy add-cluster-role-to-user cluster-admin "{{ admin_user }}"
- 
+      shell: oc adm policy add-cluster-role-to-user cluster-admin {{ admin_user }}

@@ -426,6 +426,7 @@
     domain_name_label: "{{ rg }}"
     allocation_method: Static
   register: master_lb_ip
+  when: master_lb_private_ip is not defined
 
 - name: Azure | Manage Router Public IP
   azure_rm_publicipaddress:
@@ -439,16 +440,16 @@
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
-    name: bastion-static
+    name: bastionExternalIP
     domain_name_label: "{{ rg }}b"
     allocation_method: Static
-  register: bastion_ip
+  register: bastion_public_ip
 
 - set_fact:
     router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
 
 # LBs
-- name: Azure | Manage Master LB
+- name: Azure | Manage public Master LB
   azure_rm_loadbalancer:
     name: ocpMasterLB
     location: "{{ location }}"
@@ -471,6 +472,48 @@
         frontend_port: "{{ api_port }}"
         backend_port: "{{ api_port }}"
         load_distribution: SourceIPProtocol
+  when: master_lb_private_ip is not defined
+
+# As of Ansible 2.5, the azure_rm_loadbalancer has no support for
+# creating an internal Azure load balancer. Use the Azure CLI instead.
+- name: Azure | Manage private Master LB
+  block:
+    - name: Azure | Create private Master LB
+      command: >
+        az network lb create
+          --resource-group {{ rg }}
+          --name ocpMasterLB
+          --location {{ location }}
+          --frontend-ip-name masterApiFrontend
+          --private-ip-address {{ master_lb_private_ip }}
+          --vnet-name {{ vnet_name }}
+          --subnet master_subnet
+          --public-ip-address ''
+          --backend-pool-name masterAPIBackend
+
+    - name: Azure | Create private Master LB probe
+      command: >
+        az network lb probe create
+          --resource-group {{ rg }}
+          --lb-name ocpMasterLB
+          --name masterHealthProbe
+          --protocol Tcp
+          --port {{ api_port }}
+
+    - name: Azure | Create private Master LB rule
+      command: >
+        az network lb rule create
+          --resource-group {{ rg }}
+          --lb-name ocpMasterLB
+          --name ocpApiHealth
+          --protocol Tcp
+          --frontend-port {{ api_port }}
+          --backend-port {{ api_port }}
+          --frontend-ip-name masterApiFrontend
+          --backend-pool-name masterAPIBackend
+          --probe-name masterHealthProbe
+          --load-distribution SourceIPProtocol
+  when: master_lb_private_ip is defined
 
 - name: Azure | Manage Router LB
   azure_rm_loadbalancer:
@@ -610,18 +653,37 @@
     - deploy_cns | default(true) | bool
     - not  deploy_cns_on_infra | default(false) | bool
 
-- name: Azure | Manage Bastion Nic
+- name: Azure | Manage public Bastion Nic
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
   --subnet master_subnet \
   --network-security-group bastion-nsg \
-  --public-ip-address 'bastion-static' "
+  --public-ip-address bastionExternalIP "
   register: nic
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
+  when: bastion_private_ip is not defined
+
+# The "--public-ip-address" parameter can be removed if the host on
+# which the deploy.yml playbook runs can connect to the private
+# bastion IP address.
+- name: Azure | Manage public/private Bastion Nic
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet master_subnet \
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP \
+  --private-ip-address {{ bastion_private_ip }} "
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when: bastion_private_ip is defined
 
 # Create VMs
 - name: Azure | Manage Master VMs

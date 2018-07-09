@@ -1,0 +1,54 @@
+- hosts: masters
+  tasks:
+    - name: Configure master client for local API
+      lineinfile:
+        path: "{{ item }}"
+        regexp: "    server: https://.+"
+        line: "    server: https://{{ ansible_hostname }}"
+        state: present
+        backup: yes
+      with_items:
+        - /root/.kube/config
+        - /home/{{ admin_user }}/.kube/config
+        - /etc/origin/master/admin.kubeconfig
+
+    - name: Configure master node for local API
+      lineinfile:
+        path: /etc/origin/node/system:node:{{ ansible_hostname }}.kubeconfig
+        regexp: "    server: https://[^:]+:{{ openshift_master_api_port }}"
+        line: "    server: https://{{ ansible_hostname }}:{{ openshift_master_api_port }}"
+        state: present
+        backup: yes
+      notify: Restart atomic-openshift-node
+  handlers:
+    - name: Restart atomic-openshift-node
+      service:
+        name: atomic-openshift-node
+        state: restarted
+
+- hosts: nodes:!masters
+  tasks:
+    - name: Configure non-master node for API load balancer
+      lineinfile:
+        path: /etc/origin/node/system:node:{{ ansible_hostname }}.kubeconfig
+        regexp: "    server: https://[^:]+:{{ openshift_master_api_port }}"
+        line: "    server: https://{{ master_lb_private_dns }}:{{ openshift_master_api_port }}"
+        state: present
+        backup: yes
+      notify: Restart atomic-openshift-node
+  handlers:
+    - name: Restart atomic-openshift-node
+      service:
+        name: atomic-openshift-node
+        state: restarted
+
+- hosts: localhost
+  become: yes
+  tasks:
+    - name: Configure local client for API load balancer
+      lineinfile:
+        path: "~/.kube/config"
+        regexp: "    server: https://[^:]+:{{ hostvars['ocp-master-1']['openshift_master_api_port'] }}"
+        line: "    server: https://{{ hostvars['ocp-master-1']['master_lb_private_dns'] }}:{{ hostvars['ocp-master-1']['openshift_master_api_port'] }}"
+        state: present
+        backup: yes

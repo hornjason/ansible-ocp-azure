@@ -40,7 +40,7 @@ admin_privkey: '~/.ssh/id_rsa'
 sp_name: devops
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
 sp_secret: 'password'
-sp_app_id: 'dfdffdfa0103'
+#sp_app_id: 'dfdffdfa0103'
 #######################
 # RHSM 
 # Username / Password or

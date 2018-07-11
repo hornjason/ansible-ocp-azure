@@ -8,7 +8,7 @@
     regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
     line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
   delegate_to: localhost
-  when: not deploy_cns |default(true) | bool
+  when: deploy_cns |default(true) | bool
   tags: sc
 
 - name: Azure | Import cloudprovider.yml

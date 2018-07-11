@@ -15,6 +15,15 @@
           shell:  az vm list -g "{{ rg }}" --query "[].name" -o tsv
           register: vm_list
 
+        # The bastion is not part of the Ansible inventory, but we
+        # need to unregister it with RHSM.
+        - name: Destroy Azure | Add bastion host
+          add_host:
+            name: bastion
+            groups: bastions
+            ansible_user: "{{ admin_user }}"
+            ansible_become: True
+
         - name: Destroy Azure | RHSM unregister
           redhat_subscription:
             state: absent

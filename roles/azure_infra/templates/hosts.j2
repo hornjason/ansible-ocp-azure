@@ -45,7 +45,7 @@ openshift_master_cluster_method=native
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 {% else %}
-openshift_master_cluster_hostname=ocp-master-1
+openshift_master_cluster_hostname={{ groups['masters'][0] }}
 openshift_master_cluster_public_hostname={{ master_lb_private_dns }}
 {% endif %}
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io

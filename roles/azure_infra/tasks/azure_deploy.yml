@@ -988,10 +988,16 @@
         HostName     {{ rg }}b.{{ location }}.cloudapp.azure.com
         User         {{ admin_user }}
         IdentityFile {{ admin_privkey }}
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        LogLevel QUIET
       Host ocp*
         ProxyCommand    ssh {{ admin_user }}@bastion -W %h:%p
         IdentityFile {{ admin_privkey }}
         User         {{ admin_user }}
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        LogLevel QUIET
     
 - name: Refresh inventory to ensure new instaces exist in inventory
   meta: refresh_inventory

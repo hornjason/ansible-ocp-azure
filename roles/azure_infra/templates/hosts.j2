@@ -41,8 +41,13 @@ openshift_master_console_port=443
 openshift_hosted_router_replicas=3
 openshift_hosted_registry_replicas=3
 openshift_master_cluster_method=native
+{% if master_lb_private_ip is not defined %}
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
+{% else %}
+openshift_master_cluster_hostname={{ groups['masters'][0] }}
+openshift_master_cluster_public_hostname={{ master_lb_private_dns }}
+{% endif %}
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
 openshift_deployment_type=openshift-enterprise
 openshift_release=v3.9

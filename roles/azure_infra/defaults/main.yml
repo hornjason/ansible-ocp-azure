@@ -69,11 +69,9 @@ api_port: 443
 #######################
 # Name of Master LB
 master_lb_public_ip: "masterExternalLB"
-masterlb_dns: "{{ rg }}"
 
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
-#masterlb_dns: "{{ rg }}"
 
 #######################
 # nodes 

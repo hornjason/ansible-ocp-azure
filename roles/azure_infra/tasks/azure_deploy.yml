@@ -624,29 +624,107 @@
   changed_when: false
 
 # Create VMs
-- name: Azure | Manage Master VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-master-{{ item }}
-    availability_set: ocp-master-instances 
-    vm_size: "{{ vm_size_master }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-master-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
+
+# We use the CLI option "--no-wait" to create all VMs in parallel, and
+# then wait in an Ansible loop until all of them exist.
+- name: Azure | Schedule Master VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-master-instances
+    --name ocp-master-{{ item }}
+    --size {{ vm_size_master }}
+    --storage-sku Standard_LRS
+    --nics ocp-master-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
   loop: "{{ master_nodes }}" 
 
-# create - mount data disk in order above method was unreliable
+- name: Azure | Schedule Infra VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-infra-instances
+    --name ocp-infra-{{ item }}
+    --size {{ vm_size_infra }}
+    --storage-sku Standard_LRS
+    --nics ocp-infra-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ infra_nodes }}"
+
+- name: Azure | Schedule App VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-app-instances
+    --name ocp-app-{{ item }}
+    --size {{ vm_size_node }}
+    --storage-sku Standard_LRS
+    --nics ocp-app-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ app_nodes }}"
+
+- name: Azure | Schedule CNS VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-cns-instances
+    --name ocp-cns-{{ item }}
+    --size {{ vm_size_cns }}
+    --storage-sku Standard_LRS
+    --nics ocp-cns-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ cns_nodes }}"
+  when:
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+- name: Azure | Schedule Bastion VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --name bastion
+    --size {{ vm_size_bastion }}
+    --storage-sku Standard_LRS
+    --nics bastion-VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+
+- name: Azure | Wait for master VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-master-[0-9]+") | select("string") | list | length == master_nodes | length
+
+# We create the disks separately because the "--data-disk-sizes"
+# option for "az vm create" sometimes associates the disks with the
+# wrong block device, even thought the LUN numbers in the Azure portal
+# look correct.
+
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | Master node mount container managed disk
   azure_rm_managed_disk:
@@ -678,29 +756,14 @@
   loop: "{{ master_nodes }}"
 
 # Infra VMs
-- name: Azure | Manage Infra VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-infra-{{ item }}
-    availability_set: ocp-infra-instances 
-    vm_size:  "{{ vm_size_infra }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-infra-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-  loop: "{{ infra_nodes }}" 
 
-# create - mount data disk in order above method was unreliable
+- name: Azure | Wait for infra VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-infra-[0-9]+") | select("string") | list | length == infra_nodes | length
+
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | Infra node mount container managed disk
   azure_rm_managed_disk:
@@ -735,30 +798,13 @@
     - deploy_cns | default(true) | bool
     - deploy_cns_on_infra | default(false) | bool
 
+- name: Azure | Wait for master VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-app-[0-9]+") | select("string") | list | length == app_nodes | length
 
-- name: Azure | Manage App VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-app-{{ item }}
-    availability_set: ocp-app-instances 
-    vm_size:  "{{ vm_size_node }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-app-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-  loop: "{{ app_nodes }}" 
-
-# create - mount data disk in order above method was unreliable
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | App node mount container managed disk
   azure_rm_managed_disk:
@@ -781,29 +827,13 @@
 
 # CNS VMs
 - block:
-  - name: Azure | Manage CNS VMs
-    azure_rm_virtualmachine:
-      resource_group: "{{ rg }}"
-      state: "{{ state }}"
-      name: ocp-cns-{{ item }}
-      availability_set: ocp-cns-instances 
-      vm_size:  "{{ vm_size_cns }}"
-      admin_username: "{{ admin_user }}"
-      managed_disk_type: Standard_LRS
-      network_interface_names:
-        - ocp-cns-{{ item }}VMNic
-      ssh_password_enabled: false
-      ssh_public_keys:
-        - path: /home/{{ admin_user }}/.ssh/authorized_keys
-          key_data: "{{ admin_pubkey }}"
-      image:
-        offer: RHEL
-        publisher: RedHat
-        sku: 7-RAW
-        version: latest
-    loop: "{{ cns_nodes }}" 
-  
-  # create - mount data disk in order above method was unreliable
+  - name: Azure | Wait for CNS VM creation
+    command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+    register: vm_list
+    retries: 30
+    delay: 60
+    until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
+
   # Container Storage for emptydir  /var/lib/origin /dev/sdc
   - name: Azure | CNS node mount container managed disk
     azure_rm_managed_disk:
@@ -837,25 +867,12 @@
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
 
-- name: Azure | Manage Bastion VM
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: bastion
-    vm_size:  "{{ vm_size_bastion }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - bastion-VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
+- name: Azure | Wait for bastion VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: "'bastion' in vm_list.stdout_lines"
 
 # Registry 
 - name: Azure | Manage Registry Storage Account

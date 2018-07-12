@@ -43,22 +43,8 @@
     - logging-metrics
     - ocp-deploy
 
-- name: install Grafana
-  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  ignore_errors: true
-  tags:
-    - logging-metrics
-    - ocp-deploy
-  
 - hosts: localhost
   tasks:
-    - name: Install oc client
-      yum:
-        name: atomic-openshift-clients
-        state: latest
-      become: yes
-      tags: ocp-post
- 
     - name: copy kube config
       fetch:
         src: ~/.kube/config

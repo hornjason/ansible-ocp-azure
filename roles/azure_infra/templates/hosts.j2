@@ -7,7 +7,7 @@ glusterfs
 [OSEv3:vars]
 # fix for bug
 # https://access.redhat.com/solutions/3480921
-oreg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
+ereg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
 oreg_url_node=registry.access.redhat.com/openshift3/ose-${component}:${version}
 
 
@@ -38,8 +38,8 @@ osm_api_server_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/
 openshift_node_kubelet_args={'cloud-provider': ['azure'], 'cloud-config': ['/etc/origin/cloudprovider/azure.conf'], 'enable-controller-attach-detach': ['true']}
 openshift_master_api_port=443
 openshift_master_console_port=443
-openshift_hosted_router_replicas=3
-openshift_hosted_registry_replicas=3
+openshift_hosted_router_replicas={{ infra_nodes | length }}
+openshift_hosted_registry_replicas={{ infra_nodes | length }}
 openshift_master_cluster_method=native
 {% if master_lb_private_ip is not defined %}
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com

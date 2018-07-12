@@ -436,6 +436,21 @@
     allocation_method: Static
   register: router_lb_ip
 
+# Makes this idompotent,  will fail normally since
+# domain_name_label is attached to bastion-VMNic
+- name: Azure | Check for existing BastionFQDN
+  shell: az network public-ip show -n bastionExternalIP -g jhorn-test --query dnsSettings.fqdn
+  register: bastion_fqdn
+
+- name: Azure | Manage Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    name: bastionExternalIP
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+  register: bastion_public_ip
+  when: bastion_fqdn.stdout == ''
+
 - name: Azure | Manage Bastion Public IP
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"

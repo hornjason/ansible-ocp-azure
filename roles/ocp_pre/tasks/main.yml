@@ -2,17 +2,30 @@
 # tasks file for ocp_pre
 # Remove in 3.10+
 - name: Azure | Add azure default storage class
-  lineinfile:
-    path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
-    state: present
-    regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
-    line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
+  block:
+    - lineinfile:
+        path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
+        state: present
+        regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
+        line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
+ 
+    - name: Azure | block in file
+      blockinfile:
+        path: /usr/share/ansible/openshift-ansible/roles/openshift_default_storage_class/defaults/main.yml
+        insertafter: "^openshift_storageclass_defaults"
+        block: |2
+            azure:
+              provisioner: azure-disk
+              name: azure-standard
+              parameters:
+                storageaccounttype: 'Standard_LRS'
+                kind: 'Shared'
+  when: deploy_cns |default(true) | bool
   delegate_to: localhost
   run_once: true
   become: true
-  when: deploy_cns |default(true) | bool
   tags: sc
-
+ 
 - name: Azure | Import cloudprovider.yml
   include_tasks: cloudprovider.yml
 

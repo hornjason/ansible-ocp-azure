@@ -9,17 +9,6 @@
         regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
         line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
  
-    - name: Azure | block in file
-      blockinfile:
-        path: /usr/share/ansible/openshift-ansible/roles/openshift_default_storage_class/defaults/main.yml
-        insertafter: "^openshift_storageclass_defaults"
-        block: |2
-            azure:
-              provisioner: azure-disk
-              name: azure-standard
-              parameters:
-                storageaccounttype: 'Standard_LRS'
-                kind: 'Shared'
   when: deploy_cns |default(true) | bool
   delegate_to: localhost
   run_once: true

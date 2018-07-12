@@ -48,7 +48,7 @@
     - name: Configure local client for API load balancer
       lineinfile:
         path: "~/.kube/config"
-        regexp: "    server: https://[^:]+:{{ hostvars['ocp-master-1']['openshift_master_api_port'] }}"
-        line: "    server: https://{{ hostvars['ocp-master-1']['master_lb_private_dns'] }}:{{ hostvars['ocp-master-1']['openshift_master_api_port'] }}"
+        regexp: "    server: https://[^:]+:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
+        line: "    server: https://{{ hostvars[groups['masters'][0]]['master_lb_private_dns'] }}:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
         state: present
         backup: yes

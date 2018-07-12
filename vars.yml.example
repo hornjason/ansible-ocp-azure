@@ -104,14 +104,6 @@ master_lb_public_ip: "masterExternalLB"
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
 
-#######################
-# nodes
-#######################
-#master_nodes: [1,2,3]
-#infra_nodes:  [1,2,3]
-#app_nodes:    [1,2,3]
-#cns_nodes:    [1,2,3]
-
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 

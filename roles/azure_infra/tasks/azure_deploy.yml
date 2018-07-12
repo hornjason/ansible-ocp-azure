@@ -436,6 +436,14 @@
     allocation_method: Static
   register: router_lb_ip
 
+- name: Azure | Remove Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: absent
+    name: bastionExternalIP
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+
 - name: Azure | Manage Bastion Public IP
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"

@@ -9,6 +9,7 @@
     line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
   delegate_to: localhost
   run_once: true
+  become: true
   when: deploy_cns |default(true) | bool
   tags: sc
 

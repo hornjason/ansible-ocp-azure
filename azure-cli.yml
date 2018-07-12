@@ -1,5 +1,6 @@
 - name: Azure CLI | Pre-Reqs
   hosts: localhost
+  become: true
   vars:
     rhsm_repos:
       - rhel-7-server-rpms
@@ -36,6 +37,8 @@
         - python2-pip
         - azure-cli
         - ansible
+        - atomic-openshift-clients
+        - openshift-ansible
 
     - name: Install Azure ansible pip modules
       pip:

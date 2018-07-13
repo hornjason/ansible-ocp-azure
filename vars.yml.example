@@ -142,6 +142,11 @@ metrics_volume_size: '20Gi'
 logging_volume_size: '100Gi'
 prometheus_volume_size: '20Gi'
 
+#######################
+# UI customization
+#######################
+
+#project_request_message="To create a new project, contact your team administrator."
 
 #######################
 #######################

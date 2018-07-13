@@ -79,12 +79,12 @@
         groups: ocpadmin
         append: yes
       delegate_to: "{{ groups['bastions'][0] }}"
-      with_dict: "{{ bastion_users | dict2items }}"
+      with_dict: "{{ bastion_users }}"
 
     - name: Azure | Add authorized key
       authorized_key:
         user: "{{ item.key }}"
         key: "{{ item.value }}"
       delegate_to: "{{ groups['bastions'][0] }}"
-      loop: "{{ bastion_users | dict2items }}"
+      with_dict: "{{ bastion_users }}"
   when: bastion_users != {}

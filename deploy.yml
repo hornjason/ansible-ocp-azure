@@ -28,21 +28,14 @@
 - name: call openshift deploy_cluster play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
   tags: ocp-deploy
-
+  
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  ignore_errors: true
   tags: 
     - logging-metrics
     - ocp-deploy
 
-- name: install Grafana
-  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  ignore_errors: true
-  tags: 
-    - logging-metrics
-    - ocp-deploy
-
+ 
 - hosts: localhost
   tasks:
     - name: copy kube config

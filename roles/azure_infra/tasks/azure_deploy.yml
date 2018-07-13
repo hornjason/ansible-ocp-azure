@@ -434,7 +434,7 @@
 # Makes this idompotent,  will fail normally since
 # domain_name_label is attached to bastion-VMNic
 - name: Azure | Check for existing BastionFQDN
-  shell: az network public-ip show -n bastionExternalIP -g jhorn-test --query dnsSettings.fqdn
+  shell: az network public-ip show -n bastionExternalIP -g {{ rg }}  --query dnsSettings.fqdn
   register: bastion_fqdn
 
 - name: Azure | Manage Bastion Public IP

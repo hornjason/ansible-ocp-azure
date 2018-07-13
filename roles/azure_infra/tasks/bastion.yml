@@ -69,7 +69,7 @@
 
     - name: Allow password-less sudo for ocpadmin group
       copy:
-        path: /etc/sudoers.d/ocpadmin
+        dest: /etc/sudoers.d/ocpadmin
         content: "%ocpadmin        ALL=(ALL)       NOPASSWD: ALL"
       delegate_to: "{{ groups['bastions'][0] }}"
 

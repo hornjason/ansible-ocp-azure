@@ -9,7 +9,7 @@
         regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
         line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
  
-  when: deploy_cns |default(true) | bool
+  when: not deploy_cns |default(true) | bool
   delegate_to: localhost
   run_once: true
   become: true

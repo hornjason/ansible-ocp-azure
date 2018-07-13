@@ -29,9 +29,9 @@
         until: result.status == 200
         retries: 60
         delay: 1
-   delegate_to: localhost
-   run_once: true
-   become: true
+  delegate_to: localhost
+  run_once: true
+  become: true
 
 - name: Azure | Import cloudprovider.yml
   include_tasks: cloudprovider.yml

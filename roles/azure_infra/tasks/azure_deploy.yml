@@ -1,8 +1,3 @@
-- name: Azure | Bastion copy files
-  copy:
-    src: ansible.cfg
-    dest: ansible.cfg
-
 - name: Azure | Manage Resource Group
   azure_rm_resourcegroup:
     state: "{{ state }}"
@@ -426,6 +421,7 @@
     domain_name_label: "{{ rg }}"
     allocation_method: Static
   register: master_lb_ip
+  when: master_lb_private_ip is not defined
 
 - name: Azure | Manage Router Public IP
   azure_rm_publicipaddress:
@@ -435,20 +431,35 @@
     allocation_method: Static
   register: router_lb_ip
 
+# Makes this idompotent,  will fail normally since
+# domain_name_label is attached to bastion-VMNic
+- name: Azure | Check for existing BastionFQDN
+  shell: az network public-ip show -n bastionExternalIP -g {{ rg }}  --query dnsSettings.fqdn
+  register: bastion_fqdn
+
+- name: Azure | Manage Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    name: bastionExternalIP
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+  register: bastion_public_ip
+  when: bastion_fqdn.stdout == ''
+
 - name: Azure | Manage Bastion Public IP
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
-    name: bastion-static
+    name: bastionExternalIP
     domain_name_label: "{{ rg }}b"
     allocation_method: Static
-  register: bastion_ip
+  register: bastion_public_ip
 
 - set_fact:
     router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
 
 # LBs
-- name: Azure | Manage Master LB
+- name: Azure | Manage public Master LB
   azure_rm_loadbalancer:
     name: ocpMasterLB
     location: "{{ location }}"
@@ -471,6 +482,48 @@
         frontend_port: "{{ api_port }}"
         backend_port: "{{ api_port }}"
         load_distribution: SourceIPProtocol
+  when: master_lb_private_ip is not defined
+
+# As of Ansible 2.5, the azure_rm_loadbalancer has no support for
+# creating an internal Azure load balancer. Use the Azure CLI instead.
+- name: Azure | Manage private Master LB
+  block:
+    - name: Azure | Create private Master LB
+      command: >
+        az network lb create
+          --resource-group {{ rg }}
+          --name ocpMasterLB
+          --location {{ location }}
+          --frontend-ip-name masterApiFrontend
+          --private-ip-address {{ master_lb_private_ip }}
+          --vnet-name {{ vnet_name }}
+          --subnet master_subnet
+          --public-ip-address ''
+          --backend-pool-name masterAPIBackend
+
+    - name: Azure | Create private Master LB probe
+      command: >
+        az network lb probe create
+          --resource-group {{ rg }}
+          --lb-name ocpMasterLB
+          --name masterHealthProbe
+          --protocol Tcp
+          --port {{ api_port }}
+
+    - name: Azure | Create private Master LB rule
+      command: >
+        az network lb rule create
+          --resource-group {{ rg }}
+          --lb-name ocpMasterLB
+          --name ocpApiHealth
+          --protocol Tcp
+          --frontend-port {{ api_port }}
+          --backend-port {{ api_port }}
+          --frontend-ip-name masterApiFrontend
+          --backend-pool-name masterAPIBackend
+          --probe-name masterHealthProbe
+          --load-distribution SourceIPProtocol
+  when: master_lb_private_ip is defined
 
 - name: Azure | Manage Router LB
   azure_rm_loadbalancer:
@@ -610,43 +663,140 @@
     - deploy_cns | default(true) | bool
     - not  deploy_cns_on_infra | default(false) | bool
 
-- name: Azure | Manage Bastion Nic
+- name: Azure | Manage public Bastion Nic
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
   --subnet master_subnet \
   --network-security-group bastion-nsg \
-  --public-ip-address 'bastion-static' "
+  --public-ip-address bastionExternalIP "
   register: nic
   failed_when: 
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
+  when: bastion_private_ip is not defined
+
+# The "--public-ip-address" parameter can be removed if the host on
+# which the deploy.yml playbook runs can connect to the private
+# bastion IP address.
+- name: Azure | Manage public/private Bastion Nic
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet master_subnet \
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP \
+  --private-ip-address {{ bastion_private_ip }} "
+  register: nic
+  failed_when: 
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when: bastion_private_ip is defined
 
 # Create VMs
-- name: Azure | Manage Master VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-master-{{ item }}
-    availability_set: ocp-master-instances 
-    vm_size: "{{ vm_size_master }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-master-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
+
+# We use the CLI option "--no-wait" to create all VMs in parallel, and
+# then wait in an Ansible loop until all of them exist.
+- name: Azure | Schedule Master VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-master-instances
+    --name ocp-master-{{ item }}
+    --size {{ vm_size_master }}
+    --storage-sku Standard_LRS
+    --nics ocp-master-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
   loop: "{{ master_nodes }}" 
 
-# create - mount data disk in order above method was unreliable
+- name: Azure | Schedule Infra VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-infra-instances
+    --name ocp-infra-{{ item }}
+    --size {{ vm_size_infra }}
+    --storage-sku Standard_LRS
+    --nics ocp-infra-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ infra_nodes }}"
+
+- name: Azure | Schedule App VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-app-instances
+    --name ocp-app-{{ item }}
+    --size {{ vm_size_node }}
+    --storage-sku Standard_LRS
+    --nics ocp-app-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ app_nodes }}"
+
+- name: Azure | Schedule CNS VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-cns-instances
+    --name ocp-cns-{{ item }}
+    --size {{ vm_size_cns }}
+    --storage-sku Standard_LRS
+    --nics ocp-cns-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ cns_nodes }}"
+  when:
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+
+- name: Azure | Schedule Bastion VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --name bastion
+    --size {{ vm_size_bastion }}
+    --storage-sku Standard_LRS
+    --nics bastion-VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+
+- name: Azure | Wait for master VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-master-[0-9]+") | select("string") | list | length == master_nodes | length
+
+# We create the disks separately because the "--data-disk-sizes"
+# option for "az vm create" sometimes associates the disks with the
+# wrong block device, even thought the LUN numbers in the Azure portal
+# look correct.
+
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | Master node mount container managed disk
   azure_rm_managed_disk:
@@ -678,29 +828,14 @@
   loop: "{{ master_nodes }}"
 
 # Infra VMs
-- name: Azure | Manage Infra VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-infra-{{ item }}
-    availability_set: ocp-infra-instances 
-    vm_size:  "{{ vm_size_infra }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-infra-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-  loop: "{{ infra_nodes }}" 
 
-# create - mount data disk in order above method was unreliable
+- name: Azure | Wait for infra VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-infra-[0-9]+") | select("string") | list | length == infra_nodes | length
+
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | Infra node mount container managed disk
   azure_rm_managed_disk:
@@ -735,30 +870,13 @@
     - deploy_cns | default(true) | bool
     - deploy_cns_on_infra | default(false) | bool
 
+- name: Azure | Wait for master VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-app-[0-9]+") | select("string") | list | length == app_nodes | length
 
-- name: Azure | Manage App VMs
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: ocp-app-{{ item }}
-    availability_set: ocp-app-instances 
-    vm_size:  "{{ vm_size_node }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - ocp-app-{{ item }}VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
-  loop: "{{ app_nodes }}" 
-
-# create - mount data disk in order above method was unreliable
 # Container Storage for emptydir  /var/lib/origin /dev/sdc
 - name: Azure | App node mount container managed disk
   azure_rm_managed_disk:
@@ -781,29 +899,13 @@
 
 # CNS VMs
 - block:
-  - name: Azure | Manage CNS VMs
-    azure_rm_virtualmachine:
-      resource_group: "{{ rg }}"
-      state: "{{ state }}"
-      name: ocp-cns-{{ item }}
-      availability_set: ocp-cns-instances 
-      vm_size:  "{{ vm_size_cns }}"
-      admin_username: "{{ admin_user }}"
-      managed_disk_type: Standard_LRS
-      network_interface_names:
-        - ocp-cns-{{ item }}VMNic
-      ssh_password_enabled: false
-      ssh_public_keys:
-        - path: /home/{{ admin_user }}/.ssh/authorized_keys
-          key_data: "{{ admin_pubkey }}"
-      image:
-        offer: RHEL
-        publisher: RedHat
-        sku: 7-RAW
-        version: latest
-    loop: "{{ cns_nodes }}" 
-  
-  # create - mount data disk in order above method was unreliable
+  - name: Azure | Wait for CNS VM creation
+    command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+    register: vm_list
+    retries: 30
+    delay: 60
+    until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
+
   # Container Storage for emptydir  /var/lib/origin /dev/sdc
   - name: Azure | CNS node mount container managed disk
     azure_rm_managed_disk:
@@ -837,25 +939,12 @@
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
 
-- name: Azure | Manage Bastion VM
-  azure_rm_virtualmachine:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: bastion
-    vm_size:  "{{ vm_size_bastion }}"
-    admin_username: "{{ admin_user }}"
-    managed_disk_type: Standard_LRS
-    network_interface_names:
-      - bastion-VMNic
-    ssh_password_enabled: false
-    ssh_public_keys:
-      - path: /home/{{ admin_user }}/.ssh/authorized_keys
-        key_data: "{{ admin_pubkey }}"
-    image:
-      offer: RHEL
-      publisher: RedHat
-      sku: 7-RAW
-      version: latest
+- name: Azure | Wait for bastion VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: "'bastion' in vm_list.stdout_lines"
 
 # Registry 
 - name: Azure | Manage Registry Storage Account
@@ -894,10 +983,16 @@
         HostName     {{ rg }}b.{{ location }}.cloudapp.azure.com
         User         {{ admin_user }}
         IdentityFile {{ admin_privkey }}
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        LogLevel QUIET
       Host ocp*
         ProxyCommand    ssh {{ admin_user }}@bastion -W %h:%p
         IdentityFile {{ admin_privkey }}
         User         {{ admin_user }}
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        LogLevel QUIET
     
 - name: Refresh inventory to ensure new instaces exist in inventory
   meta: refresh_inventory

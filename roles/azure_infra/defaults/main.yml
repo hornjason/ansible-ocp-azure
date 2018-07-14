@@ -11,6 +11,12 @@ admin_pubkey: ''
 # Path for the private key which will be added to localhost ssh_config for proxying through the bastion
 admin_privkey: '~/.ssh/id_rsa'
 
+# Dictionary of usernames (keys) and public SSH keys (values). These
+# will be created on the bastion and added to the ocpadmin group. If
+# this dictionary is not empty, the ocpadmin group will be configured
+# for password-less sudo.
+bastion_users: {}
+
 # Service Principal name
 sp_name: ''
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
@@ -69,11 +75,9 @@ api_port: 443
 #######################
 # Name of Master LB
 master_lb_public_ip: "masterExternalLB"
-masterlb_dns: "{{ rg }}"
 
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
-#masterlb_dns: "{{ rg }}"
 
 #######################
 # nodes 

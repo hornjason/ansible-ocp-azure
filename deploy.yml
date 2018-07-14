@@ -3,51 +3,59 @@
   roles:
     - { role: azure_infra, tags: infra }
 
+# The Azure VMs are provisioned asynchronously. It can take some time
+# until they are reachable via SSH, even after Azure reports that the
+# provisioning state is "Succeeded".
+- hosts: nodes
+  gather_facts: no
+  tasks:
+    - name: Wait for nodes to become reachable via SSH
+      wait_for_connection:
+        sleep: 30
+        timeout: 1200
+        connect_timeout: 10
+
 - hosts: nodes
   roles:
     - { role: ocp_pre, tags: ocp-pre }
 
 - name: call openshift prerequisites play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
-  tags: ocp-pre
+  tags:
+    - ocp-pre
+    - ocp-deploy
 
 - name: call openshift deploy_cluster play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
   tags: ocp-deploy
-
-- name: install Grafana
-  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  ignore_errors: true
-  tags: logging-metrics
-
-- name: install Grafana
-  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  ignore_errors: true
-  tags: logging-metrics
   
-- hosts: localhost
-  vars:
-    admin_user: "{{ openshift_master_htpasswd_users.keys() }}"
-  tasks:
-    - name: Install oc client
-      yum:
-        name: atomic-openshift-clients
-        state: latest
-      notify:
-        - add cluster-admin
-      tags: ocp-post
+- name: install Grafana
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
+  tags: 
+    - logging-metrics
+    - ocp-deploy
+
  
+- hosts: localhost
+  tasks:
     - name: copy kube config
       fetch:
         src: ~/.kube/config
         dest: "~/.kube/"
         flat: yes
       delegate_to: "{{ groups.masters[0] }}"
-      notify:
-        - add cluster-admin
       tags: ocp-post
  
-  handlers:
+- name: Configure internal master LB
+  import_playbook: activate-internal-lb.yml
+  when: master_lb_private_ip is defined
+
+- hosts: localhost
+  vars:
+    admin_user: "{{ openshift_master_htpasswd_users.keys() }}"
+  tasks:
+    # This only works after the activate-internal-lb.yml playbook has
+    # been run, if an internal Azure load balancer is being used.
     - name: add cluster-admin
-      shell: oc adm policy add-cluster-role-to-user cluster-admin "{{ admin_user }}"
- 
+      shell: oc adm policy add-cluster-role-to-user cluster-admin {{ admin_user }}
+      tags: ocp-post

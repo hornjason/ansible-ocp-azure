@@ -14,32 +14,37 @@
         - name: Destroy Azure | Gather list of VMs
           shell:  az vm list -g "{{ rg }}" --query "[].name" -o tsv
           register: vm_list
-        
-          #        - name: Azure | RHSM unregister
-          #redhat_subscription:
-            #  state: absent
-            #delegate_to: "{{ item }}"
-            #loop: "{{ vm_list.stdout_lines }}"
 
-        - name: Unregister VMs
-          command: "az vm run-command invoke -g {{ rg }}  -n {{ item }} --command-id RunShellScript --script 'sudo subscription-manager unregister'"
-          failed_when: "'FAILED' in unregister.stderr"
-          register: unregister
-          when: not skip|bool
-          with_items:
-            - "{{ vm_list.stdout_lines }}"
-    
-        - name: Destroy Azure | Delete VMs
-          azure_rm_virtualmachine:
-            resource_group: "{{ rg }}"
-            name: "{{ item }}"
+        # The bastion is not part of the Ansible inventory, but we
+        # need to unregister it with RHSM.
+        - name: Destroy Azure | Add bastion host
+          add_host:
+            name: bastion
+            groups: bastions
+            ansible_user: "{{ admin_user }}"
+            ansible_become: True
+
+        - name: Destroy Azure | RHSM unregister
+          redhat_subscription:
             state: absent
-            remove_on_absent:
-            - network_interfaces
-            #- virtual_storage
-            - public_ips
+          delegate_to: "{{ item }}"
           loop: "{{ vm_list.stdout_lines }}"
-        
+
+        # We use the CLI option "--no-wait" to delete all VMs in
+        # parallel, and then wait in an Ansible loop until all of them
+        # are gone.
+        - name: Destroy Azure | Schedule VM deletion
+          command: az vm delete --resource-group {{ rg }} --name {{ item }} --no-wait --yes
+          loop: "{{ vm_list.stdout_lines }}"
+
+        # Wait up to 20 minutes until all VMs have been deleted.
+        - name: Destroy Azure | Wait for VM deletion
+          command: az vm list -g "{{ rg }}" --query "[].name" -o tsv
+          register: vm_list2
+          retries: 20
+          delay: 60
+          until: vm_list2.stdout_lines | length == 0
+
         - name: Destroy Azure | Gather list of StorageAccounts
           shell:  az storage account list -g "{{ rg }}" --query "[].name" -o tsv
           register: sa_list
@@ -54,14 +59,20 @@
         - name: Destroy Azure | Gather list of disks
           shell:  az disk list -g "{{ rg }}" --query "[].name" -o tsv
           register: disk_list
-        
-        - name: Destroy Azure | Delete managed disk
-          azure_rm_managed_disk:
-            name: "{{ item }}"
-            location: "{{ location }}"
-            resource_group: "{{ rg }}"
-            state: absent 
+
+        # We use the CLI option "--no-wait" to delete all disks in
+        # parallel.
+        - name: Destroy Azure | Schedule managed disk deletion
+          command: az disk delete --resource-group {{ rg }} --name {{ item }} --no-wait --yes
           loop: "{{ disk_list.stdout_lines }}"
+
+        # Wait up to 20 minutes until all disks have been deleted.
+        - name: Destroy Azure | Wait for disk deletion
+          command: az disk list -g "{{ rg }}" --query "[].name" -o tsv
+          register: disk_list2
+          retries: 20
+          delay: 60
+          until: disk_list2.stdout_lines | length == 0
 
         - name: Destroy Azure | Gather list of AvailabilitySets
           shell:  az vm availability-set list -g  "{{ rg }}" --query "[].name" -o tsv

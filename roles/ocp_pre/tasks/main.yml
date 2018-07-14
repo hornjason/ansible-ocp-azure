@@ -2,14 +2,36 @@
 # tasks file for ocp_pre
 # Remove in 3.10+
 - name: Azure | Add azure default storage class
-  lineinfile:
-    path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
-    state: present
-    regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
-    line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
-  delegate_to: localhost
+  block:
+    - lineinfile:
+        path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
+        state: present
+        regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
+        line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
+ 
   when: not deploy_cns |default(true) | bool
+  delegate_to: localhost
+  run_once: true
+  become: true
   tags: sc
+
+# Hack for grafana until fixed officially
+- name: Azure | block in file
+  blockinfile:
+    path: /usr/share/ansible/openshift-ansible/roles/openshift_grafana/tasks/install_grafana.yaml
+    insertbefore: " Add new datasource to grafana"
+    block: |
+      - name: "Wait for grafana service"
+        uri:
+          url: "{% raw %}{{ grafana_route }}{% endraw %}/api/datasources"
+          status_code: 200
+        register: result
+        until: result.status == 200
+        retries: 60
+        delay: 1
+  delegate_to: localhost
+  run_once: true
+  become: true
 
 - name: Azure | Import cloudprovider.yml
   include_tasks: cloudprovider.yml

@@ -83,6 +83,13 @@ openshift_master_manage_htpasswd=true
 openshift_node_local_quota_per_fsgroup=512Mi
 networkPluginName=redhat/openshift-ovs-multitenant
 
+{% if osm_cluster_network_cidr is defined %}
+osm_cluster_network_cidr={{ osm_cluster_network_cidr }}
+{% endif %}
+{% if openshift_portal_net is defined %}
+openshift_portal_net={{ openshift_portal_net }}
+{% endif %}
+
 # Docker
 container_runtime_docker_storage_setup_device=/dev/sdd
 container_runtime_docker_storage_type=overlay2

@@ -94,6 +94,10 @@ osm_use_cockpit=false
 # Do not uninstall service catalog until post installation. Needs storage class object
 openshift_enable_service_catalog=false
 
+{% if osm_project_request_message is defined %}
+osm_project_request_message="{{ osm_project_request_message }}"
+{% endif %}
+
 # Setup azure blob registry storage
 openshift_hosted_registry_storage_kind=object
 openshift_hosted_registry_storage_provider=azure_blob

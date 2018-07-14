@@ -33,6 +33,11 @@ admin_pubkey: 'ssh-rsa LDKJFDLKJDFLDKJDF'
 # Path for the private key which will be added to localhost ssh_config for proxying through the bastion
 admin_privkey: '~/.ssh/id_rsa'
 
+# If set, creates local users with password-less sudo on the bastion.
+#bastion_users:
+#  user1: 'ssh-rsa LDKJFDLKJDFLDKJDF'
+#  user2: 'ssh-rsa FDLKJDFLDKJDFLDKJ'
+
 #######################
 # Service Principal 
 #######################

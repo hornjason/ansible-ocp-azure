@@ -1,7 +1,7 @@
 - name: Create XFS filesystem
   filesystem:
     fstype: xfs
-    dev: /dev/sde
+    dev: /dev/disk/azure/scsi1/lun2
 
 - name: Set proper permissions on mount point
   file:
@@ -12,9 +12,13 @@
 - name: Restore SELinux context
   command: restorecon -R /var/lib/etcd
 
+- name: Get filesystem UUID
+  command: blkid -sUUID -ovalue /dev/disk/azure/scsi1/lun2
+  register: blkid
+
 - name: Mount XFS filesystem
   mount:
     state: mounted
     path: /var/lib/etcd
-    src: /dev/sde
+    src: UUID={{ blkid.stdout }}
     fstype: xfs

@@ -696,9 +696,14 @@
   when: bastion_private_ip is defined
 
 # Create VMs
-
+#
 # We use the CLI option "--no-wait" to create all VMs in parallel, and
 # then wait in an Ansible loop until all of them exist.
+
+# Data disks:
+# 32 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+# 32 GB ETCD
 - name: Azure | Schedule Master VM creation
   command: >
     az vm create
@@ -707,6 +712,7 @@
     --name ocp-master-{{ item }}
     --size {{ vm_size_master }}
     --storage-sku Standard_LRS
+    --data-disk-sizes 32 32 32
     --nics ocp-master-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -716,6 +722,16 @@
     --no-wait
   loop: "{{ master_nodes }}" 
 
+- set_fact:
+    infra_cns_size: 512
+  when:
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
+# Data disks:
+# 64 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+# 512 GB Gluster brick (optional)
 - name: Azure | Schedule Infra VM creation
   command: >
     az vm create
@@ -724,6 +740,7 @@
     --name ocp-infra-{{ item }}
     --size {{ vm_size_infra }}
     --storage-sku Standard_LRS
+    --data-disk-sizes 64 32 {{ infra_cns_size | default('') }}
     --nics ocp-infra-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -733,6 +750,9 @@
     --no-wait
   loop: "{{ infra_nodes }}"
 
+# Data disks:
+# 64 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
 - name: Azure | Schedule App VM creation
   command: >
     az vm create
@@ -741,6 +761,7 @@
     --name ocp-app-{{ item }}
     --size {{ vm_size_node }}
     --storage-sku Standard_LRS
+    --data-disk-sizes 64 32
     --nics ocp-app-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -750,6 +771,10 @@
     --no-wait
   loop: "{{ app_nodes }}"
 
+# Data disks:
+# 64 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+# 512 GB Gluster brick
 - name: Azure | Schedule CNS VM creation
   command: >
     az vm create
@@ -758,6 +783,7 @@
     --name ocp-cns-{{ item }}
     --size {{ vm_size_cns }}
     --storage-sku Standard_LRS
+    --data-disk-sizes 64 32 512
     --nics ocp-cns-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -792,41 +818,6 @@
   delay: 60
   until: vm_list.stdout_lines | map("regex_search", "ocp-master-[0-9]+") | select("string") | list | length == master_nodes | length
 
-# We create the disks separately because the "--data-disk-sizes"
-# option for "az vm create" sometimes associates the disks with the
-# wrong block device, even thought the LUN numbers in the Azure portal
-# look correct.
-
-# Container Storage for emptydir  /var/lib/origin /dev/sdc
-- name: Azure | Master node mount container managed disk
-  azure_rm_managed_disk:
-    name: "ocp-master-container-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 32 
-    managed_by: "ocp-master-{{ item }}"
-  loop: "{{ master_nodes }}"
-
-# Docker VG /dev/sdd
-- name: Azure | Master node mount docker managed disk
-  azure_rm_managed_disk:
-    name: "ocp-master-docker-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 32
-    managed_by: "ocp-master-{{ item }}"
-  loop: "{{ master_nodes }}"
-
-# ETCD /dev/sde
-- name: Azure | Master node mount ETCD managed disk
-  azure_rm_managed_disk:
-    name: "ocp-master-etcd-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 32
-    managed_by: "ocp-master-{{ item }}"
-  loop: "{{ master_nodes }}"
-
 # Infra VMs
 
 - name: Azure | Wait for infra VM creation
@@ -836,40 +827,6 @@
   delay: 60
   until: vm_list.stdout_lines | map("regex_search", "ocp-infra-[0-9]+") | select("string") | list | length == infra_nodes | length
 
-# Container Storage for emptydir  /var/lib/origin /dev/sdc
-- name: Azure | Infra node mount container managed disk
-  azure_rm_managed_disk:
-    name: "ocp-infra-container-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 64
-    managed_by: "ocp-infra-{{ item }}"
-  loop: "{{ infra_nodes }}"
-
-# Docker VG /dev/sdd
-- name: Azure | Infra node mount docker managed disk
-  azure_rm_managed_disk:
-    name: "ocp-infra-docker-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 32
-    managed_by: "ocp-infra-{{ item }}"
-  loop: "{{ infra_nodes }}"
-
-# Create managed Gluster brick when deploy_cns_on_infra
-# Bricks /dev/sde 
-- name: Azure | Infra CNS mount BRICK managed disk
-  azure_rm_managed_disk:
-    name: "ocp-cns-volume-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 512
-    managed_by: "ocp-infra-{{ item }}"
-  loop: "{{ infra_nodes }}"
-  when: 
-    - deploy_cns | default(true) | bool
-    - deploy_cns_on_infra | default(false) | bool
-
 - name: Azure | Wait for master VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
   register: vm_list
@@ -877,25 +834,6 @@
   delay: 60
   until: vm_list.stdout_lines | map("regex_search", "ocp-app-[0-9]+") | select("string") | list | length == app_nodes | length
 
-# Container Storage for emptydir  /var/lib/origin /dev/sdc
-- name: Azure | App node mount container managed disk
-  azure_rm_managed_disk:
-    name: "ocp-app-container-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 64
-    managed_by: "ocp-app-{{ item }}"
-  loop: "{{ app_nodes }}"
-
-# Docker VG /dev/sdd
-- name: Azure | App node mount docker managed disk
-  azure_rm_managed_disk:
-    name: "ocp-app-docker-{{ item }}" 
-    location: "{{ location }}"
-    resource_group: "{{ rg }}"
-    disk_size_gb: 32
-    managed_by: "ocp-app-{{ item }}"
-  loop: "{{ app_nodes }}"
 
 # CNS VMs
 - block:
@@ -905,39 +843,6 @@
     retries: 30
     delay: 60
     until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
-
-  # Container Storage for emptydir  /var/lib/origin /dev/sdc
-  - name: Azure | CNS node mount container managed disk
-    azure_rm_managed_disk:
-      name: "ocp-cns-container-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 64
-      managed_by: "ocp-cns-{{ item  }}"
-    loop: "{{ cns_nodes }}"
-
-  # Docker VG /dev/sdd
-  - name: Azure | CNS node mount docker managed disk
-    azure_rm_managed_disk:
-      name: "ocp-cns-docker-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 32
-      managed_by: "ocp-cns-{{ item }}"
-    loop: "{{ cns_nodes }}"
-
-  # Bricks /dev/sde 
-  - name: Azure | CNS node mount BRICK managed disk
-    azure_rm_managed_disk:
-      name: "ocp-cns-volume-{{ item }}" 
-      location: "{{ location }}"
-      resource_group: "{{ rg }}"
-      disk_size_gb: 512
-      managed_by: "ocp-cns-{{ item }}"
-    loop: "{{ cns_nodes }}"
-  when: 
-    - deploy_cns | default(true) | bool
-    - not deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Wait for bastion VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv

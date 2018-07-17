@@ -8,43 +8,57 @@
       - rhel-7-server-ose-3.9-rpms
       - rhel-7-fast-datapath-rpms
       - rhel-7-server-ansible-2.5-rpms
-    pkgs:
+    message: |
+      This host is now setup, next steps are 
+        Login
+        - az login
+        Create Service Principal if one isn't available
+        - az ad sp create-for-rbac --name ServicePrincipalName --password PASSWORD
+        Copy vars.yml.example to vars.yml
+        - cp vars.yml.example vars.yml
+        Edit vars.yml
+        - vi vars.yml
+
+  tasks:
+    - name: Setup | Enable RHSM repositories
+      rhsm_repository:
+        name: "{{ rhsm_repos }}"
+        state: enabled
+
+    - name: Setup | Import Microsft RPM key
+      rpm_key:
+        state: present
+        key: https://packages.microsoft.com/keys/microsoft.asc
+
+    - name: Setup | Check for exisiting Microsoft yum repo
+      stat:
+        path: /etc/yum.repos.d/azure-cli.repo 
+      register: repo_check
+
+    - name: Setup | Install CLI yum repo
+      shell: sh -c 'echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/yumrepos/azure-cli\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
+      when: not repo_check.stat.exists
+
+    - name: Setup | Install required packages
+      yum:
+        name: "{{ item }}"
+        state: latest
+      loop:
       - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm     
       - python2-pip
       - azure-cli
       - atomic-openshift-clients
       - openshift-ansible
-  tasks:
-    - name: Enable RHSM repositories
-      rhsm_repository:
-        name: "{{ rhsm_repos }}"
-        state: enabled
 
-    - name: Import Microsft RPM key
-      rpm_key:
-        state: present
-        key: https://packages.microsoft.com/keys/microsoft.asc
-
-    - name: Check for exisiting Microsoft yum repo
-      stat:
-        path: /etc/yum.repos.d/azure-cli.repo 
-      register: repo_check
-
-    - name: Install CLI yum repo
-      shell: sh -c 'echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/yumrepos/azure-cli\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
-      when: not repo_check.stat.exists
-
-    - name: Install required packages
-      yum:
-        name: "{{ pkgs }}"
-        state: latest
-
-    - name: Remove epel
+    - name: Setup | Remove epel
       yum:
         name: epel-release 
         state: absent
 
-    - name: Install Azure ansible pip modules
+    - name: Setup | Install Azure ansible pip modules
       pip:
         name: ansible[azure]
 
+    - name: Setup | Prompt
+      debug:
+        msg: "{{ message.split('\n') }}"

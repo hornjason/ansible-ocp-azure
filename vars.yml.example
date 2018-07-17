@@ -97,6 +97,13 @@ api_port: 443
 #osm_cluster_network_cidr: 10.29.0.0/16
 #openshift_portal_net: 10.28.0.0/16
 
+# If this is set to true, the VNet in the given resource group is not
+# deleted by the destroy.yml playbook. This can be used in
+# environments where a peering agreement or Express Route exists for
+# the given resource group, that was configured before the OpenShift
+# installation.
+vnet_preserve: false
+
 #######################
 # LB
 #######################

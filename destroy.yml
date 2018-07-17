@@ -135,6 +135,7 @@
           shell:  az network vnet list -g "{{ rg }}" --query '[].name' -o tsv
           register: vnet_list
           tags: vnet
+          when: not vnet_preserve
 
         - name: Destroy Azure | Delete vNet
           azure_rm_virtualnetwork:
@@ -143,4 +144,5 @@
             state: absent
           tags: vnet
           loop: "{{ vnet_list.stdout_lines }}"
+          when: not vnet_preserve
       when: rg_exist.stdout == 'true'

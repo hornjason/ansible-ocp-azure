@@ -433,10 +433,10 @@
         state: "{{ state }}"
         name: "{{ router_lb_public_ip }}"
         allocation_method: Static
-      register: router_lb_ip
+      register: router_lb_ip1
 
     - set_fact:
-        router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
+        router_lb_ip: "{{ router_lb_ip1.state.ip_address }}"
   when: router_lb_dns_label is not defined
 
 - block:
@@ -447,10 +447,10 @@
         name: "{{ router_lb_public_ip }}"
         allocation_method: Static
         domain_name_label: "{{ router_lb_dns_label }}"
-      register: router_lb_ip
+      register: router_lb_ip2
 
     - set_fact:
-        router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
+        router_lb_ip: "{{ router_lb_ip2.state.ip_address }}"
   when: router_lb_dns_label is defined
 
 # Makes this idompotent,  will fail normally since

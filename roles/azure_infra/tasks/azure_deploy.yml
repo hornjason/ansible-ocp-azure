@@ -423,13 +423,35 @@
   register: master_lb_ip
   when: master_lb_private_ip is not defined
 
-- name: Azure | Manage Router Public IP
-  azure_rm_publicipaddress:
-    resource_group: "{{ rg }}"
-    state: "{{ state }}"
-    name: "{{ router_lb_public_ip }}"
-    allocation_method: Static
-  register: router_lb_ip
+# The two set_fact tasks have to be inside the blocks, they cannot be
+# merged. The router_lb_ip register variable is set (and overwritten)
+# even when the "when" condition is false.
+- block:
+    - name: Azure | Manage Router Public IP without DNS label
+      azure_rm_publicipaddress:
+        resource_group: "{{ rg }}"
+        state: "{{ state }}"
+        name: "{{ router_lb_public_ip }}"
+        allocation_method: Static
+      register: router_lb_ip1
+
+    - set_fact:
+        router_lb_ip: "{{ router_lb_ip1.state.ip_address }}"
+  when: router_lb_dns_label is not defined
+
+- block:
+    - name: Azure | Manage Router Public IP with DNS label
+      azure_rm_publicipaddress:
+        resource_group: "{{ rg }}"
+        state: "{{ state }}"
+        name: "{{ router_lb_public_ip }}"
+        allocation_method: Static
+        domain_name_label: "{{ router_lb_dns_label }}"
+      register: router_lb_ip2
+
+    - set_fact:
+        router_lb_ip: "{{ router_lb_ip2.state.ip_address }}"
+  when: router_lb_dns_label is defined
 
 # Makes this idompotent,  will fail normally since
 # domain_name_label is attached to bastion-VMNic
@@ -454,9 +476,6 @@
     domain_name_label: "{{ rg }}b"
     allocation_method: Static
   register: bastion_public_ip
-
-- set_fact:
-    router_lb_ip: "{{ router_lb_ip.state.ip_address }}"
 
 # LBs
 - name: Azure | Manage public Master LB

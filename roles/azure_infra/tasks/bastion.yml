@@ -18,6 +18,22 @@
     connect_timeout: 10
   delegate_to: "{{ groups['bastions'][0] }}"
 
+- name: Azure | Bastion RHSM increase timeout
+  lineinfile:
+    dest: /etc/rhsm/rhsm.conf
+    line: 'server_timeout=600'
+    insertafter: '^proxy_password ='
+  delegate_to: "{{ groups['bastions'][0] }}"
+
+- name: Azure | Bastion RHSM unregister
+  redhat_subscription:
+    state: absent
+  register: task_result
+  until: task_result is success
+  retries: 10
+  delay: 30
+  delegate_to: "{{ groups['bastions'][0] }}"
+
 - name: Azure | Bastion RHSM Activation Key
   redhat_subscription:
     state: "{{ state }}"

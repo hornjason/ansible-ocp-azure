@@ -109,12 +109,14 @@ vnet_preserve: false
 #######################
 # Name of Master LB public IP address
 master_lb_public_ip: "masterExternalLB"
+#master_lb_external_dns: "ocp.example.com"
 
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
 # frontend IP address. There will be no public IP address assigned to
 # the load balancer. This is useful in environments where the VNet is
 # accessible from a private network.
+# Both need to be enabled.
 #master_lb_private_ip: 192.168.0.21
 #master_lb_private_dns: ocp-console.example.com
 

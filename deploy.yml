@@ -35,7 +35,10 @@
     - logging-metrics
     - ocp-deploy
 
- 
+- hosts: nodes
+  roles:
+    - { role: ocp_post, tags: ocp-post }
+
 - hosts: localhost
   tasks:
     - name: copy kube config

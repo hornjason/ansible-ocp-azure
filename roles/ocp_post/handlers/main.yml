@@ -1,8 +1,7 @@
 ---
-# handlers file for azure_infra
+# handlers file for ocp_post
 
 - name: Restart dnsmasq
   systemd:
     name: dnsmasq
     state: restarted
-  delegate_to: "{{ groups['bastions'][0] }}"

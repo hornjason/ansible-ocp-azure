@@ -20,35 +20,35 @@
         - vi vars.yml
 
   tasks:
-    - name: Setup | Enable RHSM repositories
-      rhsm_repository:
-        name: "{{ rhsm_repos }}"
-        state: enabled
+    - name: Setup | Enable RHSM repositories 
+      rhsm_repository: 
+        name: "{{ rhsm_repos }}" 
+        state: enabled 
 
-    - name: Setup | Import Microsft RPM key
-      rpm_key:
-        state: present
-        key: https://packages.microsoft.com/keys/microsoft.asc
-
-    - name: Setup | Check for exisiting Microsoft yum repo
-      stat:
-        path: /etc/yum.repos.d/azure-cli.repo
-      register: repo_check
-
-    - name: Setup | Install CLI yum repo
-      shell: sh -c 'echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/yumrepos/azure-cli\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo'
-      when: not repo_check.stat.exists
-
-    - name: Setup | Install required packages
-      yum:
-        name: "{{ item }}"
-        state: latest
-      loop:
-      - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-      - python2-pip
-      - azure-cli
-      - atomic-openshift-clients
-      - openshift-ansible
+    - name: Setup | Import Microsft RPM key 
+      rpm_key: 
+        state: present 
+        key: https://packages.microsoft.com/keys/microsoft.asc 
+        
+    - name: Setup | Check for exisiting Microsoft yum repo 
+      stat: 
+        path: /etc/yum.repos.d/azure-cli.repo 
+      register: repo_check 
+    
+    - name: Setup | Install CLI yum repo 
+      shell: sh -c 'echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/yumrepos/azure-cli\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo' 
+      when: not repo_check.stat.exists 
+      
+    - name: Setup | Install required packages 
+      yum: 
+        name: "{{ item }}" 
+        state: latest 
+      loop: 
+        - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm 
+        - python2-pip 
+        - azure-cli
+        - atomic-openshift-clients
+        - openshift-ansible
 
     - name: Setup | Remove epel
       yum:

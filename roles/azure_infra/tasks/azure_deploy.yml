@@ -458,6 +458,7 @@
 - name: Azure | Check for existing BastionFQDN
   shell: az network public-ip show -n bastionExternalIP -g {{ rg }}  --query dnsSettings.fqdn
   register: bastion_fqdn
+  ignore_errors: true
 
 - name: Azure | Manage Bastion Public IP
   azure_rm_publicipaddress:
@@ -902,6 +903,7 @@
     create: yes
     path: ~/.ssh/config
     insertafter: EOF
+    marker: "# {mark} {{ rg }} ANSIBLE MANAGED BLOCK "
     block: |
       Host bastion
         HostName     {{ rg }}b.{{ location }}.cloudapp.azure.com

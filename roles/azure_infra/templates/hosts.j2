@@ -41,14 +41,24 @@ openshift_master_console_port=443
 openshift_hosted_router_replicas={{ infra_nodes | length }}
 openshift_hosted_registry_replicas={{ infra_nodes | length }}
 openshift_master_cluster_method=native
-{% if master_lb_private_ip is not defined %}
+
+{% if master_lb_private_ip is not defined and master_lb_external_dns is not defined %}
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
+{% elif master_lb_external_dns is defined  %}
+openshift_master_cluster_hostname={{ master_lb_external_dns }}
+openshift_master_cluster_public_hostname={{ master_lb_external_dns }}
 {% else %}
 openshift_master_cluster_hostname=ocp-master-1
 openshift_master_cluster_public_hostname={{ master_lb_private_dns }}
 {% endif %}
+
+{% if router_lb_default_subdomain is defined %}
+openshift_master_default_subdomain={{ router_lb_default_subdomain }}
+{% else %}
 openshift_master_default_subdomain={{ router_lb_ip }}.nip.io
+{% endif %}
+
 openshift_deployment_type=openshift-enterprise
 openshift_release=v3.9
 
@@ -91,15 +101,18 @@ openshift_portal_net={{ openshift_portal_net }}
 {% endif %}
 
 # Docker
-container_runtime_docker_storage_setup_device=/dev/sdd
+container_runtime_docker_storage_setup_device=/dev/disk/azure/scsi1/lun1
 container_runtime_docker_storage_type=overlay2
 openshift_docker_use_system_container=False
 openshift_use_system_containers=False
 
 # disable cockpit
 osm_use_cockpit=false
-# Do not uninstall service catalog until post installation. Needs storage class object
-openshift_enable_service_catalog=false
+openshift_enable_service_catalog=true
+
+{% if osm_project_request_message is defined %}
+osm_project_request_message="{{ osm_project_request_message }}"
+{% endif %}
 
 {% if osm_project_request_message is defined %}
 osm_project_request_message="{{ osm_project_request_message }}"
@@ -196,11 +209,11 @@ ocp-cns-{{ i }} openshift_schedulable=True openshift_hostname=ocp-cns-{{ i }}
 {% if deploy_cns | default(true) | bool %} 
 {% if not deploy_cns_on_infra | default(false) | bool %}
 {% for i in cns_nodes %}
-ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/sde" ]'
+ocp-cns-{{ i }}  glusterfs_devices='[ "/dev/disk/azure/scsi1/lun2" ]'
 {% endfor %}
 {% else %}
 {% for i in infra_nodes %}
-ocp-infra-{{ i }} glusterfs_devices='[ "/dev/sde" ]'
+ocp-infra-{{ i }} glusterfs_devices='[ "/dev/disk/azure/scsi1/lun2" ]'
 {% endfor %}
 {% endif %}
 {% endif %}

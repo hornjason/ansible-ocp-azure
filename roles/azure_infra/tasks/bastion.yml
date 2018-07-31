@@ -8,6 +8,32 @@
     ansible_user: "{{ admin_user }}"
     ansible_become: True
 
+# The Azure VMs are provisioned asynchronously. It can take some time
+# until they are reachable via SSH, even after Azure reports that the
+# provisioning state is "Succeeded".
+- name: Wait for nodes to become reachable via SSH
+  wait_for_connection:
+    sleep: 30
+    timeout: 1200
+    connect_timeout: 10
+  delegate_to: "{{ groups['bastions'][0] }}"
+
+- name: Azure | Bastion RHSM increase timeout
+  lineinfile:
+    dest: /etc/rhsm/rhsm.conf
+    line: 'server_timeout=600'
+    insertafter: '^proxy_password ='
+  delegate_to: "{{ groups['bastions'][0] }}"
+
+- name: Azure | Bastion RHSM unregister
+  redhat_subscription:
+    state: absent
+  register: task_result
+  until: task_result is success
+  retries: 10
+  delay: 30
+  delegate_to: "{{ groups['bastions'][0] }}"
+
 - name: Azure | Bastion RHSM Activation Key
   redhat_subscription:
     state: "{{ state }}"

@@ -97,22 +97,49 @@ api_port: 443
 #osm_cluster_network_cidr: 10.29.0.0/16
 #openshift_portal_net: 10.28.0.0/16
 
+# If this is set to true, the VNet in the given resource group is not
+# deleted by the destroy.yml playbook. This can be used in
+# environments where a peering agreement or Express Route exists for
+# the given resource group, that was configured before the OpenShift
+# installation.
+vnet_preserve: false
+
 #######################
 # LB
 #######################
 # Name of Master LB public IP address
 master_lb_public_ip: "masterExternalLB"
+#master_lb_external_dns: "ocp.example.com"
+
 
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
 # frontend IP address. There will be no public IP address assigned to
 # the load balancer. This is useful in environments where the VNet is
 # accessible from a private network.
+# Both need to be enabled.
 #master_lb_private_ip: 192.168.0.21
 #master_lb_private_dns: ocp-console.example.com
 
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
+
+# If this is set, Azure creates a DNS record for the public router IP
+# address. The public router IP will change if the environment is
+# deleted and redeployed, but the DNS name will stay the same.
+#
+# This can be referenced in a CNAME record in an external DNS
+# server. The full DNS name is:
+#
+# {{ router_lb_dns_label }}.{{ location }}.cloudapp.azure.com
+#
+#router_lb_dns_label: ocpapplb1
+
+# If this is set, application routes use this domain by default
+# instead of nip.io. This usually requires router_lb_dns_label to be
+# set, and a wildcard DNS entry to exist for *.app.example.com.
+#router_lb_default_subdomain: app.example.com
+
 
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"

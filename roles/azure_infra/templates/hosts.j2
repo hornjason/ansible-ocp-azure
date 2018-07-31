@@ -114,6 +114,10 @@ openshift_enable_service_catalog=true
 osm_project_request_message="{{ osm_project_request_message }}"
 {% endif %}
 
+{% if osm_project_request_message is defined %}
+osm_project_request_message="{{ osm_project_request_message }}"
+{% endif %}
+
 # Setup azure blob registry storage
 openshift_hosted_registry_storage_kind=object
 openshift_hosted_registry_storage_provider=azure_blob

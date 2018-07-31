@@ -111,6 +111,7 @@ vnet_preserve: false
 master_lb_public_ip: "masterExternalLB"
 #master_lb_external_dns: "ocp.example.com"
 
+
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
 # frontend IP address. There will be no public IP address assigned to
@@ -138,6 +139,7 @@ router_lb_public_ip: "routerExternalLB"
 # instead of nip.io. This usually requires router_lb_dns_label to be
 # set, and a wildcard DNS entry to exist for *.app.example.com.
 #router_lb_default_subdomain: app.example.com
+
 
 # registry Storage Account Name
 registry_storage_account: "{{ rg | regex_replace('-') }}"

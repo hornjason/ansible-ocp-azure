@@ -35,7 +35,7 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ cns_subnet_cidr }}"
-  when: 
+  when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
 
@@ -333,7 +333,7 @@
           access: Allow
           priority: 750
           direction: Inbound
-  when: 
+  when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
 
@@ -407,7 +407,7 @@
           access: Allow
           priority: 900
           direction: Inbound
-  when: 
+  when:
     - deploy_cns | default(true) | bool
     - deploy_cns_on_infra | default(false) | bool
 
@@ -600,7 +600,7 @@
     resource_group: "{{ rg }}"
     platform_fault_domain_count: 2
     sku: Aligned
-  when: 
+  when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
 
@@ -615,7 +615,7 @@
   #  subnet_name: "{{ item.subnet }}"
   #  security_group_name: "{{ }}"
   #  public_ip: false
-  
+
 - name: Azure | Manage Master Nics
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
@@ -628,7 +628,7 @@
   --public-ip-address '' "
   loop: "{{ master_nodes }}"
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
@@ -645,7 +645,7 @@
   --public-ip-address '' "
   loop: "{{ infra_nodes }}"
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
@@ -660,7 +660,7 @@
   --public-ip-address '' "
   loop: "{{ app_nodes }}"
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
@@ -675,11 +675,11 @@
   --public-ip-address '' "
   loop: "{{ cns_nodes }}"
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: 
+  when:
     - deploy_cns | default(true) | bool
     - not  deploy_cns_on_infra | default(false) | bool
 
@@ -691,7 +691,7 @@
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP "
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
@@ -709,7 +709,7 @@
   --public-ip-address bastionExternalIP \
   --private-ip-address {{ bastion_private_ip }} "
   register: nic
-  failed_when: 
+  failed_when:
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
@@ -740,7 +740,7 @@
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
     --ssh-key-value "{{ admin_pubkey }}"
     --no-wait
-  loop: "{{ master_nodes }}" 
+  loop: "{{ master_nodes }}"
 
 - set_fact:
     infra_cns_size: 512
@@ -871,7 +871,7 @@
   delay: 60
   until: "'bastion' in vm_list.stdout_lines"
 
-# Registry 
+# Registry
 - name: Azure | Manage Registry Storage Account
   azure_rm_storageaccount:
     resource_group: "{{ rg }}"
@@ -919,7 +919,6 @@
         StrictHostKeyChecking no
         UserKnownHostsFile /dev/null
         LogLevel QUIET
-    
+
 - name: Refresh inventory to ensure new instaces exist in inventory
   meta: refresh_inventory
-

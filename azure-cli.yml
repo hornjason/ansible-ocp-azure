@@ -18,7 +18,6 @@
         - cp vars.yml.example vars.yml
         Edit vars.yml
         - vi vars.yml
-
   tasks:
     - name: Setup | Enable RHSM repositories 
       rhsm_repository: 

@@ -108,8 +108,7 @@ openshift_use_system_containers=False
 
 # disable cockpit
 osm_use_cockpit=false
-# Do not uninstall service catalog until post installation. Needs storage class object
-openshift_enable_service_catalog=false
+openshift_enable_service_catalog=true
 
 {% if osm_project_request_message is defined %}
 osm_project_request_message="{{ osm_project_request_message }}"

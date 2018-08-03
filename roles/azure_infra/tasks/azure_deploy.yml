@@ -417,7 +417,7 @@
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
-    name: "{{ master_lb_public_ip }}"
+    name: masterPublicIP
     domain_name_label: "{{ rg }}"
     allocation_method: Static
   register: master_lb_ip
@@ -431,7 +431,7 @@
       azure_rm_publicipaddress:
         resource_group: "{{ rg }}"
         state: "{{ state }}"
-        name: "{{ router_lb_public_ip }}"
+        name: routerPublicIP
         allocation_method: Static
       register: router_lb_ip1
 
@@ -444,7 +444,7 @@
       azure_rm_publicipaddress:
         resource_group: "{{ rg }}"
         state: "{{ state }}"
-        name: "{{ router_lb_public_ip }}"
+        name: routerPublicIP
         allocation_method: Static
         domain_name_label: "{{ router_lb_dns_label }}"
       register: router_lb_ip2
@@ -486,7 +486,7 @@
     resource_group: "{{ rg }}"
     frontend_ip_configurations:
       - name: masterApiFrontend
-        public_ip_address: "{{ master_lb_public_ip }}"
+        public_ip_address: masterPublicIP
     backend_address_pools:
       - name: masterAPIBackend
     probes:
@@ -552,7 +552,7 @@
     resource_group: "{{ rg }}"
     frontend_ip_configurations:
       - name: routerFrontEnd
-        public_ip_address: "{{ router_lb_public_ip }}"
+        public_ip_address: routerPublicIP
     backend_address_pools:
       - name: routerBackEnd
     probes:

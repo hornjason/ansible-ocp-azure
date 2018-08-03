@@ -42,15 +42,15 @@ openshift_hosted_router_replicas={{ infra_nodes | length }}
 openshift_hosted_registry_replicas={{ infra_nodes | length }}
 openshift_master_cluster_method=native
 
-{% if master_lb_private_ip is not defined and master_lb_external_dns is not defined %}
+{% if master_lb_private_ip is not defined and master_lb_dns is not defined %}
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
-{% elif master_lb_external_dns is defined  %}
-openshift_master_cluster_hostname={{ master_lb_external_dns }}
-openshift_master_cluster_public_hostname={{ master_lb_external_dns }}
+{% elif master_lb_private_ip is not defined %}
+openshift_master_cluster_hostname={{ master_lb_dns }}
+openshift_master_cluster_public_hostname={{ master_lb_dns }}
 {% else %}
 openshift_master_cluster_hostname=ocp-master-1
-openshift_master_cluster_public_hostname={{ master_lb_private_dns }}
+openshift_master_cluster_public_hostname={{ master_lb_dns }}
 {% endif %}
 
 {% if router_lb_default_subdomain is defined %}

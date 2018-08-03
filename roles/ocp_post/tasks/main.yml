@@ -1,0 +1,9 @@
+---
+# tasks file for ocp_post
+
+- name: Azure | Configure private dnsmasq domains
+  template:
+    src: private-dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/private-dnsmasq.conf
+  notify: Restart dnsmasq
+  when: dns_domain_nameservers is defined

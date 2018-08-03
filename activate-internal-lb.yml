@@ -32,7 +32,7 @@
       lineinfile:
         path: /etc/origin/node/system:node:{{ ansible_hostname }}.kubeconfig
         regexp: "    server: https://[^:]+:{{ openshift_master_api_port }}"
-        line: "    server: https://{{ master_lb_private_dns }}:{{ openshift_master_api_port }}"
+        line: "    server: https://{{ master_lb_dns }}:{{ openshift_master_api_port }}"
         state: present
         backup: yes
       notify: Restart atomic-openshift-node
@@ -49,6 +49,6 @@
       lineinfile:
         path: "~/.kube/config"
         regexp: "    server: https://[^:]+:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
-        line: "    server: https://{{ hostvars[groups['masters'][0]]['master_lb_private_dns'] }}:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
+        line: "    server: https://{{ hostvars[groups['masters'][0]]['master_lb_dns'] }}:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
         state: present
         backup: yes

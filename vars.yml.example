@@ -145,6 +145,20 @@ router_lb_public_ip: "routerExternalLB"
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 
 
+###########################
+# DNS
+###########################
+
+# Optional dictionary of DNS domains and nameservers to configure on
+# the bastion and each node. DNS lookups for the given domains will be
+# done against the given nameservers. This can be used in environments
+# where a peering agreement or Express Route exists for the given
+# resource group
+#
+#dns_domain_nameservers:
+#  internal.example.com: 192.168.100.1
+
+
 #######################
 # Custom Named Certs
 #######################

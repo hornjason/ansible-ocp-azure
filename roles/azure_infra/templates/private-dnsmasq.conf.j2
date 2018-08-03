@@ -1,0 +1,3 @@
+{% for item in dns_domain_nameservers.keys() %}
+server=/{{ item }}/{{ dns_domain_nameservers[item] }}
+{% endfor %}

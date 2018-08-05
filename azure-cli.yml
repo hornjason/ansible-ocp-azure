@@ -69,3 +69,36 @@
     - name: Setup | Prompt
       debug:
         msg: "{{ message.split('\n') }}"
+
+
+    - name: Azure | SSH config file exists with proper permissions
+      become: false
+      file:
+        state: touch
+        path: ~/.ssh/config
+        mode: 0600
+      tags: ssh_config
+    
+    - name: Azure | update SSH proxy config
+      become: false
+      blockinfile:
+        create: yes
+        path: ~/.ssh/config
+        insertafter: EOF
+        marker: "# {mark} {{ rg }} ANSIBLE MANAGED BLOCK "
+        block: |
+          Host bastion
+            HostName     {{ rg }}b.{{ location }}.cloudapp.azure.com
+            User         {{ admin_user }}
+            IdentityFile {{ admin_privkey }}
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel QUIET
+          Host ocp*
+            ProxyCommand    ssh {{ admin_user }}@bastion -W %h:%p
+            IdentityFile {{ admin_privkey }}
+            User         {{ admin_user }}
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel QUIET
+      tags: ssh_config

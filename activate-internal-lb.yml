@@ -47,8 +47,25 @@
   tasks:
     - name: Configure local client for API load balancer
       lineinfile:
-        path: "~/.kube/config"
+        path: /home/{{ admin_user }}/.kube/config
         regexp: "    server: https://[^:]+:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
         line: "    server: https://{{ hostvars[groups['masters'][0]]['master_lb_dns'] }}:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
         state: present
         backup: yes
+
+    # The bastion is not part of the Ansible inventory file.
+    - name: Add bastion host
+      add_host:
+        name: bastion
+        groups: bastions
+        ansible_user: "{{ admin_user }}"
+        ansible_become: True
+
+    - name: Configure bastion client for API load balancer
+      lineinfile:
+        path: /home/{{ admin_user }}/.kube/config
+        regexp: "    server: https://[^:]+:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
+        line: "    server: https://{{ hostvars[groups['masters'][0]]['master_lb_dns'] }}:{{ hostvars[groups['masters'][0]]['openshift_master_api_port'] }}"
+        state: present
+        backup: yes
+      delegate_to: bastion

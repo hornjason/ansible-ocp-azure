@@ -114,6 +114,9 @@ vnet_customer_managed_infra_subnet: "customer-created-subnet"
 vnet_customer_managed_app_subnet: "customer-created-subnet"
 vnet_customer_managed_cns_subnet: "customer-created-subnet"
 
+# Se agregar para determinar donde crear los balanceadores
+vnet_customer_managed_resource_group: 4Network
+
 # vnet_customer_managed: false
 vnet_name: "{{ rg }}vnet"
 vnet_cidr: "192.168.0.0/16"

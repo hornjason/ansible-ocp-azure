@@ -520,20 +520,20 @@
     - name: Azure | Create private Master LB
       command: >
         az network lb create
-          --resource-group {{ rg }}
+          --resource-group {{ vnet_customer_managed_resource_group if vnet_customer_managed | default(true) | bool else rg }}
           --name ocpMasterLB
           --location {{ location }}
           --frontend-ip-name masterApiFrontend
           --private-ip-address {{ master_lb_private_ip }}
           --vnet-name {{ vnet_name }}
-          --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }}
+          --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else 'master_subnet' }}
           --public-ip-address ''
           --backend-pool-name masterAPIBackend
 
     - name: Azure | Create private Master LB probe
       command: >
         az network lb probe create
-          --resource-group {{ rg }}
+          --resource-group {{ vnet_customer_managed_resource_group if vnet_customer_managed | default(true) | bool else rg }}
           --lb-name ocpMasterLB
           --name masterHealthProbe
           --protocol Tcp
@@ -542,7 +542,7 @@
     - name: Azure | Create private Master LB rule
       command: >
         az network lb rule create
-          --resource-group {{ rg }}
+          --resource-group {{ vnet_customer_managed_resource_group if vnet_customer_managed | default(true) | bool else rg }}
           --lb-name ocpMasterLB
           --name ocpApiHealth
           --protocol Tcp
@@ -629,7 +629,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else 'master_subnet' }} \
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -783,7 +783,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else 'master_subnet' }} \
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP "
   register: nic
@@ -800,7 +800,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else 'master_subnet' }} \
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP \
   --private-ip-address {{ bastion_private_ip }} "

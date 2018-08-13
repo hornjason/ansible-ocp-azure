@@ -863,6 +863,9 @@
     retries: 30
     delay: 60
     until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
+  when:
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Wait for bastion VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv

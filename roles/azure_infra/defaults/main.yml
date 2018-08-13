@@ -24,7 +24,7 @@ sp_secret: ''
 
 
 #######################
-# RHSM 
+# RHSM
 # Username / Password or
 # Activation key / OrgId
 #######################
@@ -36,10 +36,10 @@ rhsm_org: ""
 # or keep the same if only using one pool
 rhsm_broker_pool: ""
 rhsm_node_pool: ""
-rhsm_repos: 
+rhsm_repos:
   - rhel-7-server-rpms
   - rhel-7-server-extras-rpms
-  - rhel-7-server-ose-3.9-rpms
+  - rhel-7-server-ose-3.10-rpms
   - rhel-7-fast-datapath-rpms
   - rhel-7-server-ansible-2.4-rpms
 bastion_pkgs:
@@ -82,7 +82,7 @@ master_lb_public_ip: "masterExternalLB"
 router_lb_public_ip: "routerExternalLB"
 
 #######################
-# nodes 
+# nodes
 #######################
 master_nodes: [1,2,3]
 infra_nodes:  [1,2,3]
@@ -98,9 +98,9 @@ registry_storage_account: "{{ rg | regex_replace('-') }}"
 #######################
 # Example with admin:redhat
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
-openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider' }]
 
-# 
+#
 #ocp_admin_passwd: 'redhat'
 
 #######################
@@ -120,7 +120,7 @@ prometheus_volume_size: '20Gi'
 
 #######################
 #######################
-# Don't change 
+# Don't change
 #######################
 #######################
 bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"

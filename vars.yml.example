@@ -5,7 +5,7 @@ location: eastus
 rg: "test"
 
 #######################
-# nodes 
+# nodes
 #######################
 master_nodes: [1,2,3]
 infra_nodes:  [1,2,3]
@@ -39,7 +39,7 @@ admin_privkey: '~/.ssh/id_rsa'
 #  user2: 'ssh-rsa FDLKJDFLDKJDFLDKJ'
 
 #######################
-# Service Principal 
+# Service Principal
 #######################
 # This is used to template the cloud config file on each node for azure
 sp_name: devops
@@ -47,7 +47,7 @@ sp_name: devops
 sp_secret: 'password'
 #sp_app_id: 'dfdffdfa0103'
 #######################
-# RHSM 
+# RHSM
 # Username / Password or
 # Activation key / OrgId
 #######################
@@ -59,15 +59,16 @@ rhsm_org: ""
 # or keep the same if only using one pool
 rhsm_broker_pool: ""
 rhsm_node_pool: ""
-rhsm_repos: 
+# For openshift contakiner Storage
+rhsm_ocs_pool: ""
+rhsm_repos:
   - rhel-7-server-rpms
   - rhel-7-server-extras-rpms
-  - rhel-7-server-ose-3.9-rpms
+  - rhel-7-server-ose-3.10-rpms
   - rhel-7-fast-datapath-rpms
   - rhel-7-server-ansible-2.4-rpms
 bastion_pkgs:
   - ansible
-  - atomic-openshift-utils
   - atomic-openshift-clients
   - git
   - tmux
@@ -107,21 +108,19 @@ vnet_preserve: false
 #######################
 # LB
 #######################
-# Name of Master LB public IP address
-master_lb_public_ip: "masterExternalLB"
-#master_lb_external_dns: "ocp.example.com"
+# DNS name for the master load balancer. If not set,
+# {{ rg }}.{{ location }}.cloudapp.azure.com will be used.
+#master_lb_dns: ""
 
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
 # frontend IP address. There will be no public IP address assigned to
 # the load balancer. This is useful in environments where the VNet is
 # accessible from a private network.
-# Both need to be enabled.
+#
+# If this is set, the master_lb_dns parameter also needs to be defined
+# and point to this IP address in DNS.
 #master_lb_private_ip: 192.168.0.21
-#master_lb_private_dns: ocp-console.example.com
-
-# Name of Router LB
-router_lb_public_ip: "routerExternalLB"
 
 # If this is set, Azure creates a DNS record for the public router IP
 # address. The public router IP will change if the environment is
@@ -143,6 +142,20 @@ router_lb_public_ip: "routerExternalLB"
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 
 
+###########################
+# DNS
+###########################
+
+# Optional dictionary of DNS domains and nameservers to configure on
+# the bastion and each node. DNS lookups for the given domains will be
+# done against the given nameservers. This can be used in environments
+# where a peering agreement or Express Route exists for the given
+# resource group
+#
+#dns_domain_nameservers:
+#  internal.example.com: 192.168.100.1
+
+
 #######################
 # Custom Named Certs
 #######################
@@ -158,9 +171,9 @@ registry_storage_account: "{{ rg | regex_replace('-') }}"
 #######################
 # Example with admin:changeme
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
-openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'}]
 
-# 
+#
 #ocp_admin_passwd: 'redhat'
 
 #######################
@@ -185,7 +198,7 @@ prometheus_volume_size: '20Gi'
 
 #######################
 #######################
-# Don't change 
+# Don't change
 #######################
 #######################
 bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"

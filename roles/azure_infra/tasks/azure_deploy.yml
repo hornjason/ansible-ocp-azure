@@ -10,6 +10,8 @@
     resource_group: "{{ rg }}"
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
+  when:
+    - vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Master subnet
   azure_rm_subnet:
@@ -18,6 +20,8 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ master_subnet_cidr }}"
+  when:
+    - vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Infra subnet
   azure_rm_subnet:
@@ -26,6 +30,8 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ infra_subnet_cidr }}"
+  when:
+    - vnet_customer_managed | default(false) | bool
 
 # only create if deploying CNS on separate nodes
 - name: Azure | Manage CNS subnet
@@ -38,6 +44,7 @@
   when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
+    - vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage App subnet
   azure_rm_subnet:
@@ -46,6 +53,8 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ app_subnet_cidr }}"
+  when:
+    - vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:

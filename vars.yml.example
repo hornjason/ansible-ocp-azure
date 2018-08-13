@@ -84,6 +84,17 @@ bastion_pkgs:
 #######################
 # Network
 #######################
+
+# If this is true, it won't touch the current customer network configuration,
+# leaving this task to the Azure administrator; Otherwise this playbook run will
+# create, update or delete (as the azure_rm_virtualnetwork module works)
+vnet_customer_managed: true
+vnet_customer_managed_master_subnet: "customer-created-subnet"
+vnet_customer_managed_infra_subnet: "customer-created-subnet"
+vnet_customer_managed_app_subnet: "customer-created-subnet"
+vnet_customer_managed_cns_subnet: "customer-created-subnet"
+
+# vnet_customer_managed: false
 vnet_name: "{{ rg }}vnet"
 vnet_cidr: "192.168.0.0/16"
 master_subnet_cidr: "192.168.0.0/27"

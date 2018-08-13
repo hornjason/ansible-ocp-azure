@@ -685,8 +685,8 @@
 - name: Azure | Manage Master Nics (ansible managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
-  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
-  --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -703,8 +703,8 @@
 - name: Azure | Manage Master Nics (Customer Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_master_subnet }} \
+  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --subnet {{ vnet_customer_managed_master_subnet_id }} \
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -742,8 +742,8 @@
 - name: Azure | Manage Infra Nics (Customer Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-infra-{{ item }}VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_infra_subnet }} \
+  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --subnet {{ vnet_customer_managed_infra_subnet_id }} \
   --network-security-group infra-node-nsg \
   --lb-name ocpRouterLB \
   --lb-address-pools RouterBackend \
@@ -779,8 +779,8 @@
 - name: Azure | Manage Node  Nics (Customer Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-app-{{ item }}VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_app_subnet }} \
+  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --subnet {{ vnet_customer_managed_app_subnet_id }} \
   --network-security-group node-nsg \
   --internal-dns-name ocp-app-{{ item }} \
   --public-ip-address '' \
@@ -817,8 +817,8 @@
 - name: Azure | Manage CNS Nics (Customer Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-cns-{{ item }}VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_cns_subnet }} \
+  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --subnet {{ vnet_customer_managed_cns_subnet_id }} \
   --network-security-group cns-nsg \
   --internal-dns-name ocp-cns-{{ item }} \
   --public-ip-address '' \

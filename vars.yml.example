@@ -19,7 +19,7 @@ cns_nodes:    [1,2,3]
 #######################
 
 vm_size_master: Standard_D4s_v3
-vm_size_infra:  Standard_D4s_v3
+vm_size_infra:  Standard_D8s_v3
 vm_size_node:   Standard_D2s_v3
 vm_size_cns:    Standard_D8s_v3
 vm_size_bastion: Standard_D1

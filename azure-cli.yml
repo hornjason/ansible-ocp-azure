@@ -10,6 +10,7 @@
       - rhel-7-server-ansible-2.5-rpms
     rhsm_repos_disable:
       - rhel-7-server-htb-rpms
+      - rhel-7-server-ose-3.9-rpms
     message: |
       This host is now setup, next steps are
         Login

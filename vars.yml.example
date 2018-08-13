@@ -24,6 +24,11 @@ vm_size_node:   Standard_D2s_v3
 vm_size_cns:    Standard_D8s_v3
 vm_size_bastion: Standard_D1
 
+# This can be a pay-as-you-go image ie.
+#   vm_image_id_or_urn: "RedHat:RHEL:7-RAW:latest"
+# or a valid URN like "/subscriptions/abcdef1234-5432-f4k3-id123123123/resourceGroups/ocp-cloud-rhel-image/providers/Microsoft.Compute/images/rhel-server-7.5.1"
+vm_image_id_or_urn: "RedHat:RHEL:7-RAW:latest"
+
 #######################
 # SSH user for all VMs created
 #######################

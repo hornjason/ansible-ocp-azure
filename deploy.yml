@@ -41,14 +41,30 @@
 
 - hosts: localhost
   tasks:
-    - name: copy kube config
+    - name: Copy kube config to installation host
       fetch:
-        src: ~/.kube/config
-        dest: "~/.kube/"
+        src: /home/{{ admin_user }}/.kube/config
+        dest: ~/.kube/
         flat: yes
       delegate_to: "{{ groups.masters[0] }}"
       tags: ocp-post
- 
+
+    # The bastion is not part of the Ansible inventory file.
+    - name: Add bastion host
+      add_host:
+        name: bastion
+        groups: bastions
+        ansible_user: "{{ admin_user }}"
+        ansible_become: True
+      tags: ocp-post
+
+    - name: Copy kube config to bastion host
+      copy:
+        src: ~/.kube/config
+        dest: /home/{{ admin_user }}/.kube/
+      delegate_to: bastion
+      tags: ocp-post
+
 - name: Configure internal master LB
   import_playbook: activate-internal-lb.yml
   when: master_lb_private_ip is defined
@@ -61,5 +77,5 @@
     # This only works after the activate-internal-lb.yml playbook has
     # been run, if an internal Azure load balancer is being used.
     - name: add cluster-admin
-      shell: oc adm policy add-cluster-role-to-user cluster-admin {{ openshift_cluster_admin }}
+      shell: oc adm policy add-cluster-role-to-user cluster-admin {{ admin }}
       tags: ocp-post

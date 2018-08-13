@@ -90,7 +90,7 @@ openshift_master_named_certificates={{ master_cert }}
 {% if openshift_master_identity_providers is defined %}
 openshift_master_identity_providers={{ openshift_master_identity_providers }}
 {% else %}
-openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'}]
 {% endif %}
 
 {% if openshift_master_htpasswd_users is defined %}

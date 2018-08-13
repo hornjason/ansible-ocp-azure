@@ -13,6 +13,26 @@ app_nodes:    [1,2,3]
 # Min of 3 required and add odd nums only for CNS
 cns_nodes:    [1,2,3]
 
+# If this is set, you can customize some static values for the VM Creation task,
+# make sure to keep the same amount of array items otherwise these definitions
+# will not be applied
+master_nodes_custom_props:
+  - static_ip: 10.70.0.31
+  - static_ip: 10.70.0.32
+  - static_ip: 10.70.0.33
+infra_nodes_custom_props:
+  - static_ip: 10.70.0.35
+  - static_ip: 10.70.0.36
+  - static_ip: 10.70.0.37
+app_nodes_custom_props:
+  - static_ip: 10.70.0.40
+  - static_ip: 10.70.0.41
+  - static_ip: 10.70.0.42
+cns_nodes_custom_props:
+  - static_ip: 10.70.0.40
+  - static_ip: 10.70.0.41
+  - static_ip: 10.70.0.42
+
 #######################
 # vm sizes (adapt)
 # az vm list-sizes -l <region> -o table

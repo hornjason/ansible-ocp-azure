@@ -23,7 +23,7 @@
         - vi vars.yml
 
   tasks:
-    - name: Setup | Enable RHSM repositories 
+    - name: Setup | Disable RHSM repositories 
       rhsm_repository: 
         name: "{{ rhsm_repos_disable }}" 
         state: disabled

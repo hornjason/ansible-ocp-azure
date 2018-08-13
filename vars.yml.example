@@ -114,7 +114,9 @@ vnet_customer_managed_infra_subnet: "customer-created-subnet"
 vnet_customer_managed_app_subnet: "customer-created-subnet"
 vnet_customer_managed_cns_subnet: "customer-created-subnet"
 
-# Se agregar para determinar donde crear los balanceadores
+# this must be set if vnet_customer_managed is true, this will be used to
+# determine azure id of managed vnet and subnets (this can be a
+# different resource group)
 vnet_customer_managed_resource_group: 4Network
 
 # vnet_customer_managed: false

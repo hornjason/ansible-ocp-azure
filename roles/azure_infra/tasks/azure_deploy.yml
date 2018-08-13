@@ -11,7 +11,7 @@
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
   when:
-    - vnet_customer_managed | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Master subnet
   azure_rm_subnet:
@@ -21,7 +21,7 @@
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ master_subnet_cidr }}"
   when:
-    - vnet_customer_managed | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Infra subnet
   azure_rm_subnet:
@@ -31,7 +31,7 @@
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ infra_subnet_cidr }}"
   when:
-    - vnet_customer_managed | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 # only create if deploying CNS on separate nodes
 - name: Azure | Manage CNS subnet
@@ -44,7 +44,7 @@
   when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
-    - vnet_customer_managed | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage App subnet
   azure_rm_subnet:
@@ -54,7 +54,7 @@
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ app_subnet_cidr }}"
   when:
-    - vnet_customer_managed | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
@@ -526,7 +526,7 @@
           --frontend-ip-name masterApiFrontend
           --private-ip-address {{ master_lb_private_ip }}
           --vnet-name {{ vnet_name }}
-          --subnet master_subnet
+          --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }}
           --public-ip-address ''
           --backend-pool-name masterAPIBackend
 
@@ -629,7 +629,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet master_subnet \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -783,7 +783,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed == 'true' else "master_subnet" }} \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP "
   register: nic
@@ -800,7 +800,7 @@
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
   --vnet-name {{ vnet_name }} \
-  --subnet master_subnet \
+  --subnet {{ vnet_customer_managed_master_subnet if vnet_customer_managed | default(true) | bool else "master_subnet" }} \
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP \
   --private-ip-address {{ bastion_private_ip }} "

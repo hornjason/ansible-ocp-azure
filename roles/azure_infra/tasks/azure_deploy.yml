@@ -95,7 +95,7 @@
         vnet_customer_managed_vnet_id: "{{ vnet_customer_managed_vnet_ids.stdout }}"
         vnet_customer_managed_master_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
         vnet_customer_managed_infra_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
-        vnet_customer_managed_apps_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
+        vnet_customer_managed_app_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
 
     - set_fact:
         vnet_customer_managed_cns_subnet_id: "{{ vnet_customer_managed_cns_subnet_ids.stdout }}"
@@ -103,15 +103,6 @@
         - deploy_cns | default(true) | bool
         - not deploy_cns_on_infra | default(false) | bool
   when: vnet_customer_managed | default(false) | bool
-
-- name: DEBUG
-  debug:
-    var: item
-  with_items:
-    - "{{ vnet_customer_managed_vnet_id }}"
-    - "{{ vnet_customer_managed_master_subnet_id }}"
-    - "{{ vnet_customer_managed_infra_subnet_id }}"
-    - "{{ vnet_customer_managed_apps_subnet_id }}"
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:

@@ -700,7 +700,7 @@
   --lb-address-pools masterAPIBackend \
   --internal-dns-name ocp-master-{{ item }} \
   --public-ip-address '' \
-  --private-ip-address {{ master_nodes_custom_props[item].static_ip }}"
+  --private-ip-address {{ master_nodes_custom_props[item -1].static_ip }}"
   loop: "{{ master_nodes }}"
   register: nic
   failed_when:
@@ -738,7 +738,7 @@
   --lb-address-pools RouterBackend \
   --internal-dns-name ocp-infra-{{ item }} \
   --public-ip-address '' \
-  --private-ip-address {{ infra_nodes_custom_props[item].static_ip }}"
+  --private-ip-address {{ infra_nodes_custom_props[item -1].static_ip }}"
   loop: "{{ infra_nodes }}"
   register: nic
   failed_when:
@@ -772,7 +772,7 @@
   --network-security-group node-nsg \
   --internal-dns-name ocp-app-{{ item }} \
   --public-ip-address '' \
-  --private-ip-address {{ app_nodes_custom_props[item].static_ip }}"
+  --private-ip-address {{ app_nodes_custom_props[item -1].static_ip }}"
   loop: "{{ app_nodes }}"
   register: nic
   failed_when:
@@ -809,7 +809,7 @@
   --network-security-group cns-nsg \
   --internal-dns-name ocp-cns-{{ item }} \
   --public-ip-address '' \
-  --private-ip-address {{ cns_nodes_custom_props[item].static_ip }}"
+  --private-ip-address {{ cns_nodes_custom_props[item -1].static_ip }}"
   loop: "{{ cns_nodes }}"
   register: nic
   failed_when:

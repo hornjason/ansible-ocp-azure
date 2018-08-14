@@ -823,10 +823,25 @@
     - cns_nodes_custom_props | length == cns_nodes | length
 
 
-- name: Azure | Manage public Bastion Nic
+- name: Azure | Manage public Bastion Nic (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
-  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP "
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - bastion_private_ip is not defined
+    - not vnet_customer_managed | default(false) | bool
+
+- name: Azure | Manage public Bastion Nic (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
   --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP "
@@ -835,15 +850,34 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: bastion_private_ip is not defined
+  when:
+    - bastion_private_ip is not defined
+    - vnet_customer_managed | default(false) | bool
+
 
 # The "--public-ip-address" parameter can be removed if the host on
 # which the deploy.yml playbook runs can connect to the private
 # bastion IP address.
-- name: Azure | Manage public/private Bastion Nic
+- name: Azure | Manage public/private Bastion Nic (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
-  --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP \
+  --private-ip-address {{ bastion_private_ip }} "
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - bastion_private_ip is defined
+    - not vnet_customer_managed | default(false) | bool
+
+- name: Azure | Manage public/private Bastion Nic (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
   --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP \
@@ -853,7 +887,9 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: bastion_private_ip is defined
+  when:
+    - bastion_private_ip is defined
+    - vnet_customer_managed | default(false) | bool
 
 # Create VMs
 #

@@ -17,6 +17,11 @@ cns_nodes:    [1,2,3]
 # vm sizes (adapt)
 # az vm list-sizes -l <region> -o table
 #######################
+# For a cheaper solution when testing
+#vm_size_master: Standard_E2_v3
+#vm_size_infra:  Standard_E4_v3
+#vm_size_node:   Standard_E2_v3
+#vm_size_cns:    Standard_E4_v3
 
 vm_size_master: Standard_D4s_v3
 vm_size_infra:  Standard_D8s_v3

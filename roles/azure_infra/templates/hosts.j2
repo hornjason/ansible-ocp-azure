@@ -49,7 +49,7 @@ openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.
 openshift_master_cluster_hostname={{ master_lb_dns }}
 openshift_master_cluster_public_hostname={{ master_lb_dns }}
 {% else %}
-openshift_master_cluster_hostname={{ master_lb_dns }}
+openshift_master_cluster_hostname=ocp-master-1
 openshift_master_cluster_public_hostname={{ master_lb_dns }}
 {% endif %}
 

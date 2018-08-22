@@ -114,6 +114,11 @@ vnet_customer_managed_infra_subnet: "customer-created-subnet"
 vnet_customer_managed_app_subnet: "customer-created-subnet"
 vnet_customer_managed_cns_subnet: "customer-created-subnet"
 
+# If this is set, it will force the dhclient to use it as domain in
+# It will overwrite the domain reddog.ms.com to {{vnet_customer_dns_domain}}
+# at /etc/resolv.conf. Otherwise
+vnet_customer_dns_domain: "dirtrab.cl"
+
 # this must be set if vnet_customer_managed is true, this will be used to
 # determine azure id of managed vnet and subnets (this can be a
 # different resource group)

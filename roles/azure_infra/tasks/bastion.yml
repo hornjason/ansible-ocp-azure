@@ -166,3 +166,24 @@
       notify: Restart dnsmasq
       when: upstream_dns != '127.0.0.1'
   when: dns_domain_nameservers is defined
+
+- block:
+  - name: Azure | override search server at dhcp conf
+    blockinfile:
+      create: yes
+      path: /etc/dhcp/dhclient-eth0.conf
+      insertafter: EOF
+      marker: "# {mark} {{ rg }} ANSIBLE MANAGED BLOCK "
+      block: |
+        supersede domain-name "{{ vnet_customer_dns_domain }} ";
+        supersede domain-search "{{ vnet_customer_dns_domain }} ";
+        supersede search "{{ vnet_customer_dns_domain }} ";
+    delegate_to: "{{ groups['bastions'][0] }}"
+
+  - name: Azure | apply config
+    systemd:
+      name: network
+      state: restarted
+    delegate_to: "{{ groups['bastions'][0] }}"
+
+  when: vnet_customer_dns_domain is defined

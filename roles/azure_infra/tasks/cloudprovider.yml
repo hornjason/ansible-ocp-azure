@@ -19,10 +19,12 @@
   run_once: true
   delegate_to: localhost
 
-- name: azure ServicePrincipal ID
-  shell: az ad app show --id "http://{{sp_name}}" -o tsv --query 'appId'
-  register: sp_app
-  changed_when: false
-  run_once: true
-  delegate_to: localhost
+- block:
+    - name: azure ServicePrincipal ID
+      shell: az ad app show --id "http://{{sp_name}}" -o tsv --query 'appId'
+      register: sp_app
+      changed_when: false
+      run_once: true
+      delegate_to: localhost
   when: sp_app_id is undefined
+

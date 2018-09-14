@@ -107,7 +107,7 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
-deploy_cns_on_infra: false
+deploy_cns_on_infra: true
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true

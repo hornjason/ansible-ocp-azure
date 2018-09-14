@@ -185,16 +185,22 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
-deploy_cns_on_infra: false
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true
 
 # volume sizing defaults
-metrics_volume_size: '20Gi'
-logging_volume_size: '100Gi'
-prometheus_volume_size: '20Gi'
+metrics_volume_size: 25
+logging_volume_size: 100
+prometheus_volume_size: 25
 
+# OpenShift Container StorageClass
+# Sizes in Gi
+# infra usable storage needs to be greater than below calculations
+# logging_volume_size * ec2_count_infra) + metrics_volume_size + prometheus_volume_size) * 1.3  + registry_volume_size (if using OCS for registry)
+ocs_infra_cluster_allocated_storage: "{{ ((( logging_volume_size|int * infra_nodes|length|int ) + metrics_volume_size|int  + prometheus_volume_size|int ) * 1.3  ) | round | int }}"
+ocs_infra_cluster_usable_storage: 512
+ocs_app_cluster_usable_storage: 100
 #######################
 # UI customization
 #######################
@@ -207,3 +213,4 @@ prometheus_volume_size: '20Gi'
 #######################
 #######################
 bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"
+deploy_cns_on_infra: true

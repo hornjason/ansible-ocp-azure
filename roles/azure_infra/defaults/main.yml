@@ -63,10 +63,10 @@ bastion_pkgs:
 #######################
 vnet_name: "{{ rg }}vnet"
 vnet_cidr: "192.168.0.0/24"
-master_subnet_cder: "192.168.0.0/27"
-infra_subnet_cder:  "192.168.0.32/27"
-cns_subnet_cder:    "192.168.0.64/27"
-app_subnet_cder:    "192.168.0.128/25"
+master_subnet_cidr: "192.168.0.0/27"
+infra_subnet_cidr:  "192.168.0.32/27"
+cns_subnet_cidr:    "192.168.0.64/27"
+app_subnet_cidr:    "192.168.0.128/25"
 
 api_port: 443
 

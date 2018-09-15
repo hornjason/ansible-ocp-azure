@@ -48,6 +48,7 @@ openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.
 {% elif master_lb_private_ip is not defined %}
 openshift_master_cluster_hostname={{ master_lb_dns }}
 openshift_master_cluster_public_hostname={{ master_lb_dns }}
+
 {% else %}
 openshift_master_cluster_hostname=ocp-master-1
 openshift_master_cluster_public_hostname={{ master_lb_dns }}
@@ -135,6 +136,7 @@ openshift_logging_es_nodeselector={"region": "infra"}
 openshift_logging_kibana_nodeselector={"region": "infra"}
 openshift_logging_curator_nodeselector={"region": "infra"}
 openshift_logging_es_cluster_size={{ infra_nodes | length }}
+
 {% else %}
 openshift_logging_install_logging=false
 {% endif %}

@@ -1,20 +1,4 @@
 ---
-# tasks file for ocp_pre
-# Remove in 3.10+
-- name: Azure | Add azure default storage class
-  block:
-    - lineinfile:
-        path: /usr/share/ansible/openshift-ansible/playbooks/openshift-hosted/private/openshift_default_storage_class.yml
-        state: present
-        regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
-        line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
- 
-  when: not deploy_cns |default(true) | bool
-  delegate_to: localhost
-  run_once: true
-  become: true
-  tags: sc
-
 # Hack for grafana until fixed officially
 - name: Azure | block in file
   blockinfile:
@@ -32,9 +16,6 @@
   delegate_to: localhost
   run_once: true
   become: true
-
-- name: Azure | Import cloudprovider.yml
-  include_tasks: cloudprovider.yml
 
 - name: Azure | Import subscribe.yml
   include_tasks: subscribe.yml

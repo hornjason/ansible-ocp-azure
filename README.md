@@ -1,7 +1,7 @@
 
 
 # OpenShift on Azure
-This project automates the installation of OpenShift on Azure using ansible.  It follows the [OpenShift + Azure Reference Architecture](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/) closely. By default the following is deployed, 3 masters, 3 Infra nodes, 3 app nodes, 3 cns nodes, Logging (EFK), Metrics, Prometheus & Grafana. SSH access is restricted into the cluster by allowing only the bastion to reach each Node,  ssh is then proxied from the ansible control host via the bastion accesing nodes by hostname.  `ssh ocp-master-1`    To quickly standup an ansible deploy host have a look at [vagrant-rhel](https://github.com/hornjason/vagrant-rhel),  as of now it only supports [virtualbox and libvirt providers](https://app.vagrantup.com/jasonhorn/boxes/rhel7).
+This project automates the installation of OpenShift on Azure using ansible.  It follows the [OpenShift + Azure Reference Architecture](https://access.redhat.com/documentation/en-us/reference_architectures/2018/html-single/deploying_and_managing_openshift_3.9_on_azure/) closely. By default the following is deployed, 3 masters, 3 Infra nodes, 3 app nodes, Logging (EFK), Metrics, Prometheus & Grafana. If deploying OpenShift Container Storage (Formerly CNS), this automation will follow best practices and depending on how many app nodes being deployed will create 1 OCS cluster for all storage is less than 3 app nodes and 2 OCS clusters if greater than or equal to 3 app nodes.  SSH access is restricted into the cluster by allowing only the bastion to reach each Node,  ssh is then proxied from the ansible control host via the bastion accesing nodes by hostname.  `ssh ocp-master-1`    To quickly standup an ansible deploy host have a look at [vagrant-rhel](https://github.com/hornjason/vagrant-rhel),  as of now it only supports [virtualbox and libvirt providers](https://app.vagrantup.com/jasonhorn/boxes/rhel7).
 
 
 ## Topology
@@ -16,7 +16,6 @@ Instance | Hostname | # |VM Size | vCpu's | Memory
 Master Nodes | ocp-master-# | 3 | Standard_D4s_v3 | 4 | 16  
 Infra Nodes | ocp-infra-# | 3 | Standard_D4s_v3 | 4 | 16   
 App Nodes | ocp-app-# | 3 | Standard_D2S_v3 | 2 | 8  
-CNS Nodes | ocp-cns-# | 3 | Standard_D8s_v3 | 8 | 32 
 Bastion | bastion | 1 | Standard_D1 | 1 | 3.5
 Total | | 13 | | 55 | 219.5Gb 
 
@@ -29,7 +28,6 @@ VM sizes can be configured from defaults by changing the following variables, if
 | vm_size_master: | Standard_D4s_v3
 | vm_size_infra: | Standard_D4s_v3
 | vm_size_node:  | Standard_D2s_v3
-| vm_size_cns:   |   Standard_D8s_v3
 | vm_size_bastion: | Standard_D1
 
 
@@ -57,6 +55,8 @@ A few Pre-Reqs need to be met and are documented in the Reference Architecture a
     --enable="rhel-7-server-ansible-2.5-rpms"
 
     sudo yum -y install ansible atomic-openshift-utils git
+
+As of now a fix for deployging multiple OCS clusters is only available by cloning and using the latest release-3.10 branch from https://github.com/openshift/openshift-ansible.git
 ```
 
  2. Clone this repository
@@ -98,19 +98,20 @@ Most defaults are specified in `role/azure/defaults/main.yml`,  Sensitive inform
  - **rhsm_org**: - If subscribing to RHSM using activation key and orgId fill in orgId here.
  - **rhsm_broker_pool**: - If you have a broker pool id for masters / infra nodes fill it in here.  This will be used to for all masters/infra nodes.  If you only have one pool id to use make this the same as `rhsm_node_pool`.
  - **rhsm_node_pool**: - If you have a application pool id for app nodes fill it in here.  This will be used for all application nodes.  If you only have one pool id to use make this the same as `rhsm_broker_pool`
+- **ocs_infra_cluster_usable_storage**: How much usable storage on the INFRA OCS Cluster,  This will create bricks of this size on each Infra Node.
+- **ocs_app_cluster_usable_storage**: How much usable storage on the Application OCS Cluster,  This will create bricks of this size on each APP Node.
 Number of Nodes
  - **master_nodes**: Defaults to 3 -> [1,2,3]
  - **infra_nodes**:  Defaults to 3 -> [1,2,3]
  - **app_nodes**:    Defaults to 3 -> [1,2,3] add additional nodes here.
- - **cns_nodes**:    Defaults to 3 -> [1,2,3], the min. required.
-
+ 
 Optional Variables:
 
  - **vnet_cidr**: - Can customize as needed, ex `"10.0.0.0/16"`
 By Default the HTPasswdPasswordIdentityProvider is used but can be customized,  this will be templated out to the ansible hosts file.  By default htpasswd user is added.
 - **openshift_master_htpasswd_users**: - Contains the user: < passwd hash generated from htpasswd -n user >
 - **deploy_cns**: true
-- **deploy_cns_to_infra**: true  - This will deploy CNS on Infra nodes and **NOT** create separate CNS nodes
+- **deploy_cns_to_infra**: true  - This should always be 'True' if depoy_cns is 'True', no longer create separate CNS nodes
 - **deploy_metrics**: true
 - **deploy_logging**: true
 - **deploy_prometheus**: true

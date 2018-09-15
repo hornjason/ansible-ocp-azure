@@ -760,7 +760,7 @@
     --name ocp-infra-{{ item }}
     --size {{ vm_size_infra }}
     --storage-sku Standard_LRS
-    --data-disk-sizes 64 32 {{ infra_cns_size | default('') }}
+    --data-disk-sizes 64 32 {{ ocs_infra_cluster_usable_storage | default('') }}
     --nics ocp-infra-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -781,7 +781,7 @@
     --name ocp-app-{{ item }}
     --size {{ vm_size_node }}
     --storage-sku Standard_LRS
-    --data-disk-sizes 64 32
+    --data-disk-sizes 64 32 {{ ocs_app_cluster_usable_storage if (infra_nodes|length + app_nodes|length >= 6) else '' }}
     --nics ocp-app-{{ item }}VMNic
     --image RedHat:RHEL:7-RAW:latest
     --admin-username {{ admin_user }}
@@ -792,9 +792,11 @@
   loop: "{{ app_nodes }}"
 
 # Data disks:
+# DEPRICATED No longer creates CNS Nodes
 # 64 GB Container Storage for emptydir, /var/lib/origin
 # 32 GB Docker VG
 # 512 GB Gluster brick
+#
 - name: Azure | Schedule CNS VM creation
   command: >
     az vm create
@@ -847,7 +849,7 @@
   delay: 60
   until: vm_list.stdout_lines | map("regex_search", "ocp-infra-[0-9]+") | select("string") | list | length == infra_nodes | length
 
-- name: Azure | Wait for master VM creation
+- name: Azure | Wait for app VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
   register: vm_list
   retries: 30
@@ -863,6 +865,9 @@
     retries: 30
     delay: 60
     until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
+  when:
+    - deploy_cns | default(true) | bool
+    - not deploy_cns_on_infra | default(false) | bool
 
 - name: Azure | Wait for bastion VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv

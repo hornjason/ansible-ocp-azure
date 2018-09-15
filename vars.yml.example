@@ -17,9 +17,14 @@ cns_nodes:    [1,2,3]
 # vm sizes (adapt)
 # az vm list-sizes -l <region> -o table
 #######################
+# For a cheaper solution when testing
+#vm_size_master: Standard_E2_v3
+#vm_size_infra:  Standard_E4_v3
+#vm_size_node:   Standard_E2_v3
+#vm_size_cns:    Standard_E4_v3
 
 vm_size_master: Standard_D4s_v3
-vm_size_infra:  Standard_D4s_v3
+vm_size_infra:  Standard_D8s_v3
 vm_size_node:   Standard_D2s_v3
 vm_size_cns:    Standard_D8s_v3
 vm_size_bastion: Standard_D1
@@ -65,12 +70,11 @@ rhsm_ocs_pool: ""
 rhsm_repos:
   - rhel-7-server-rpms
   - rhel-7-server-extras-rpms
-  - rhel-7-server-ose-3.9-rpms
+  - rhel-7-server-ose-3.10-rpms
   - rhel-7-fast-datapath-rpms
   - rhel-7-server-ansible-2.4-rpms
 bastion_pkgs:
   - ansible
-  - atomic-openshift-utils
   - atomic-openshift-clients
   - git
   - tmux
@@ -112,7 +116,7 @@ vnet_preserve: false
 #######################
 # DNS name for the master load balancer. If not set,
 # {{ rg }}.{{ location }}.cloudapp.azure.com will be used.
-#master_lb_dns: "ocp.example.com"
+#master_lb_dns: ""
 
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
@@ -173,7 +177,7 @@ registry_storage_account: "{{ rg | regex_replace('-') }}"
 #######################
 # Example with admin:changeme
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
-openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'}]
 
 #
 #ocp_admin_passwd: 'redhat'
@@ -182,16 +186,22 @@ openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true',
 # deploy CNS
 #######################
 deploy_cns: true
-deploy_cns_on_infra: false
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true
 
 # volume sizing defaults
-metrics_volume_size: '20Gi'
-logging_volume_size: '100Gi'
-prometheus_volume_size: '20Gi'
+metrics_volume_size: 25
+logging_volume_size: 100
+prometheus_volume_size: 25
 
+# OpenShift Container StorageClass
+# Sizes in Gi
+# infra usable storage needs to be greater than below calculations
+# logging_volume_size * ec2_count_infra) + metrics_volume_size + prometheus_volume_size) * 1.3  + registry_volume_size (if using OCS for registry)
+ocs_infra_cluster_allocated_storage: "{{ ((( logging_volume_size|int * infra_nodes|length|int ) + metrics_volume_size|int  + prometheus_volume_size|int ) * 1.3  ) | round | int }}"
+ocs_infra_cluster_usable_storage: 512
+ocs_app_cluster_usable_storage: 100
 #######################
 # UI customization
 #######################
@@ -204,3 +214,4 @@ prometheus_volume_size: '20Gi'
 #######################
 #######################
 bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"
+deploy_cns_on_infra: true

@@ -10,10 +10,9 @@ aadClientSecret: {{ sp_secret }}
 {% endif %}
 aadTenantID: {{ tenant_id.stdout }}
 resourceGroup: {{ rg }}
-cloud: AzurePublicCloud
+cloud: {{ openshift_cloudprovider_azure_cloud }}
 location: {{ location }}
 vnetName: {{ vnet_name }}
-securityGroupName: node-nsg
-primaryAvailabilitySetName: ocp-app-instances
+securityGroupName: {{ openshift_cloudprovider_azure_security_group_name }}
+primaryAvailabilitySetName: {{ openshift_cloudprovider_azure_availability_set_name }}
 useInstanceMetadata: true
-

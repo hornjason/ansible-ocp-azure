@@ -1,8 +1,10 @@
 ---
+- name: Azure | Import cloudprovider.yml
+  include_tasks: cloudprovider.yml
+
 - name: Azure | Import azure_deploy.yml
   include_tasks: azure_deploy.yml
   tags: deploy
 
 - name: Azure | Import bastion.yml
   include_tasks: bastion.yml
- 

@@ -81,6 +81,7 @@ master_lb_public_ip: "masterExternalLB"
 # Name of Router LB
 router_lb_public_ip: "routerExternalLB"
 
+
 #######################
 # nodes 
 #######################

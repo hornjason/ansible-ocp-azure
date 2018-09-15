@@ -1,4 +1,22 @@
 ---
+- block:
+  - name: Azure | override search server at dhcp conf
+    blockinfile:
+      create: yes
+      path: /etc/dhcp/dhclient-eth0.conf
+      insertafter: EOF
+      marker: "# {mark} {{ rg }} ANSIBLE MANAGED BLOCK "
+      block: |
+        supersede domain-name "{{ vnet_customer_dns_domain }} ";
+        supersede domain-search "{{ vnet_customer_dns_domain }} ";
+        supersede search "{{ vnet_customer_dns_domain }} ";
+
+  - name: Azure | apply config
+    systemd:
+      name: network
+      state: restarted
+  when: vnet_customer_dns_domain is defined
+
 # tasks file for ocp_pre
 # Remove in 3.10+
 - name: Azure | Add azure default storage class
@@ -8,7 +26,7 @@
         state: present
         regexp: ".*openshift_cloudprovider_kind.*['aws','gce','openstack','vsphere']"
         line: "    - openshift_cloudprovider_kind in ['aws','gce','openstack','vsphere','azure']"
- 
+
   when: not deploy_cns |default(true) | bool
   delegate_to: localhost
   run_once: true

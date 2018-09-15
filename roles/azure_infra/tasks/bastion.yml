@@ -114,3 +114,76 @@
       delegate_to: "{{ groups['bastions'][0] }}"
       with_dict: "{{ bastion_users }}"
   when: bastion_users != {}
+
+- block:
+    - name: Azure | Install dnsmasq
+      yum:
+        name: dnsmasq
+        state: installed
+      delegate_to: "{{ groups['bastions'][0] }}"
+
+    - name: Azure | Configure private dnsmasq domain
+      template:
+        src: private-dnsmasq.conf.j2
+        dest: /etc/dnsmasq.d/private-dnsmasq.conf
+      delegate_to: "{{ groups['bastions'][0] }}"
+      notify: Restart dnsmasq
+
+    - name: Azure | Get upstream nameserver
+      shell: grep '^nameserver ' /etc/resolv.conf | awk '{ print $2 }'
+      register: cmd
+      delegate_to: "{{ groups['bastions'][0] }}"
+
+    - set_fact:
+        upstream_dns: "{{ cmd.stdout }}"
+
+    - name: Azure | Update resolv.conf
+      lineinfile:
+        path: /etc/resolv.conf
+        regexp: "^nameserver "
+        line: "nameserver 127.0.0.1"
+      delegate_to: "{{ groups['bastions'][0] }}"
+
+    - name: Azure | Create origin-dns.conf
+      copy:
+        content: |
+          no-resolv
+          domain-needed
+          no-negcache
+          max-cache-ttl=1
+          enable-dbus
+          bind-interfaces
+          listen-address=127.0.0.1
+        dest: /etc/dnsmasq.d/origin-dns.conf
+      delegate_to: "{{ groups['bastions'][0] }}"
+      notify: Restart dnsmasq
+
+    - name: Azure | Create origin-upstream-dns.conf
+      copy:
+        content: server={{ upstream_dns }}
+        dest: /etc/dnsmasq.d/origin-upstream-dns.conf
+      delegate_to: "{{ groups['bastions'][0] }}"
+      notify: Restart dnsmasq
+      when: upstream_dns != '127.0.0.1'
+  when: dns_domain_nameservers is defined
+
+- block:
+  - name: Azure | override search server at dhcp conf
+    blockinfile:
+      create: yes
+      path: /etc/dhcp/dhclient-eth0.conf
+      insertafter: EOF
+      marker: "# {mark} {{ rg }} ANSIBLE MANAGED BLOCK "
+      block: |
+        supersede domain-name "{{ vnet_customer_dns_domain }} ";
+        supersede domain-search "{{ vnet_customer_dns_domain }} ";
+        supersede search "{{ vnet_customer_dns_domain }} ";
+    delegate_to: "{{ groups['bastions'][0] }}"
+
+  - name: Azure | apply config
+    systemd:
+      name: network
+      state: restarted
+    delegate_to: "{{ groups['bastions'][0] }}"
+
+  when: vnet_customer_dns_domain is defined

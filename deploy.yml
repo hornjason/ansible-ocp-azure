@@ -28,24 +28,44 @@
 - name: call openshift deploy_cluster play
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
   tags: ocp-deploy
-  
+
 - name: install Grafana
   import_playbook: /usr/share/ansible/openshift-ansible/playbooks/openshift-grafana/config.yml
-  tags: 
+  tags:
     - logging-metrics
     - ocp-deploy
+  when: deploy_prometheus | default(false) | bool
 
- 
+- hosts: nodes
+  roles:
+    - { role: ocp_post, tags: ocp-post }
+
 - hosts: localhost
   tasks:
-    - name: copy kube config
+    - name: Copy kube config to installation host
       fetch:
-        src: ~/.kube/config
-        dest: "~/.kube/"
+        src: /home/{{ admin_user }}/.kube/config
+        dest: ~/.kube/
         flat: yes
       delegate_to: "{{ groups.masters[0] }}"
       tags: ocp-post
- 
+
+    # The bastion is not part of the Ansible inventory file.
+    - name: Add bastion host
+      add_host:
+        name: bastion
+        groups: bastions
+        ansible_user: "{{ admin_user }}"
+        ansible_become: True
+      tags: ocp-post
+
+    - name: Copy kube config to bastion host
+      copy:
+        src: ~/.kube/config
+        dest: /home/{{ admin_user }}/.kube/
+      delegate_to: bastion
+      tags: ocp-post
+
 - name: Configure internal master LB
   import_playbook: activate-internal-lb.yml
   when: master_lb_private_ip is defined

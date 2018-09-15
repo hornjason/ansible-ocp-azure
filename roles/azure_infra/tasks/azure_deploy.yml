@@ -10,6 +10,8 @@
     resource_group: "{{ rg }}"
     address_prefixes_cidr:
         - "{{ vnet_cidr }}"
+  when:
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Master subnet
   azure_rm_subnet:
@@ -18,6 +20,8 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ master_subnet_cidr }}"
+  when:
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Infra subnet
   azure_rm_subnet:
@@ -26,6 +30,8 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ infra_subnet_cidr }}"
+  when:
+    - not vnet_customer_managed | default(false) | bool
 
 # only create if deploying CNS on separate nodes
 - name: Azure | Manage CNS subnet
@@ -38,6 +44,7 @@
   when:
     - deploy_cns | default(true) | bool
     - not deploy_cns_on_infra | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage App subnet
   azure_rm_subnet:
@@ -46,6 +53,56 @@
     virtual_network_name: "{{ vnet_name }}"
     resource_group: "{{ rg }}"
     address_prefix_cidr: "{{ app_subnet_cidr }}"
+  when:
+    - not vnet_customer_managed | default(false) | bool
+
+- name: Gather information ID from vnet and subnets
+  block:
+    - name: Azure | Gather custom vnet ID
+      command: >
+        az network vnet show
+          -g {{ vnet_customer_managed_resource_group }}
+          --name {{ vnet_name }}
+          --query id
+      register: vnet_customer_managed_vnet_ids
+
+    - name: Azure | Gather custom subnet ID
+      command: >
+        az network vnet subnet show
+          -g {{ vnet_customer_managed_resource_group }}
+          -n {{ item }}
+          --vnet-name {{ vnet_name }}
+          --query id
+      with_items:
+        - "{{ vnet_customer_managed_master_subnet }}"
+        - "{{ vnet_customer_managed_infra_subnet }}"
+        - "{{ vnet_customer_managed_app_subnet }}"
+      register: vnet_customer_managed_subnet_ids
+
+    - name: Azure | Gather custom CNS subnet ID
+      command: >
+        az network vnet subnet show
+          -g {{ vnet_customer_managed_resource_group }}
+          -n {{ vnet_customer_managed_cns_subnet }}
+          --vnet-name {{ vnet_name }}
+          --query id
+      register: vnet_customer_managed_cns_subnet_ids
+      when:
+        - deploy_cns | default(true) | bool
+        - not deploy_cns_on_infra | default(false) | bool
+
+    - set_fact:
+        vnet_customer_managed_vnet_id: "{{ vnet_customer_managed_vnet_ids.stdout }}"
+        vnet_customer_managed_master_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
+        vnet_customer_managed_infra_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
+        vnet_customer_managed_app_subnet_id: "{{ vnet_customer_managed_subnet_ids.results[0].stdout }}"
+
+    - set_fact:
+        vnet_customer_managed_cns_subnet_id: "{{ vnet_customer_managed_cns_subnet_ids.stdout }}"
+      when:
+        - deploy_cns | default(true) | bool
+        - not deploy_cns_on_infra | default(false) | bool
+  when: vnet_customer_managed | default(false) | bool
 
 - name: Azure | Manage Bastion Network Security Group
   azure_rm_securitygroup:
@@ -417,7 +474,7 @@
   azure_rm_publicipaddress:
     resource_group: "{{ rg }}"
     state: "{{ state }}"
-    name: "{{ master_lb_public_ip }}"
+    name: masterPublicIP
     domain_name_label: "{{ rg }}"
     allocation_method: Static
   register: master_lb_ip
@@ -486,7 +543,7 @@
     resource_group: "{{ rg }}"
     frontend_ip_configurations:
       - name: masterApiFrontend
-        public_ip_address: "{{ master_lb_public_ip }}"
+        public_ip_address: masterPublicIP
     backend_address_pools:
       - name: masterAPIBackend
     probes:
@@ -516,8 +573,8 @@
           --location {{ location }}
           --frontend-ip-name masterApiFrontend
           --private-ip-address {{ master_lb_private_ip }}
-          --vnet-name {{ vnet_name }}
-          --subnet master_subnet
+          --vnet-name {{ vnet_customer_managed_vnet_id if vnet_customer_managed | default(false) | bool else vnet_name }}
+          --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
           --public-ip-address ''
           --backend-pool-name masterAPIBackend
 
@@ -552,7 +609,7 @@
     resource_group: "{{ rg }}"
     frontend_ip_configurations:
       - name: routerFrontEnd
-        public_ip_address: "{{ router_lb_public_ip }}"
+        public_ip_address: routerPublicIP
     backend_address_pools:
       - name: routerBackEnd
     probes:
@@ -616,11 +673,12 @@
   #  security_group_name: "{{ }}"
   #  public_ip: false
 
-- name: Azure | Manage Master Nics
+
+- name: Azure | Manage Master Nics (ansible managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-master-{{ item }}VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet master_subnet \
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
   --network-security-group master-nsg \
   --lb-name ocpMasterLB \
   --lb-address-pools masterAPIBackend \
@@ -632,8 +690,29 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
+  when: not vnet_customer_managed | default(false) | bool
 
-- name: Azure | Manage Infra Nics
+- name: Azure | Manage Master Nics (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-master-{{ item }}VMNic \
+  --subnet {{ vnet_customer_managed_master_subnet_id }} \
+  --network-security-group master-nsg \
+  --lb-name ocpMasterLB \
+  --lb-address-pools masterAPIBackend \
+  --internal-dns-name ocp-master-{{ item }} \
+  --public-ip-address '' \
+  --private-ip-address {{ master_nodes_custom_props[item -1].static_ip }}"
+  loop: "{{ master_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - vnet_customer_managed | default(false) | bool
+    - master_nodes_custom_props | length == master_nodes | length
+
+- name: Azure | Manage Infra Nics (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-infra-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
@@ -649,8 +728,29 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
+  when: not vnet_customer_managed | default(false) | bool
 
-- name: Azure | Manage Node  Nics
+- name: Azure | Manage Infra Nics (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-infra-{{ item }}VMNic \
+  --subnet {{ vnet_customer_managed_infra_subnet_id }} \
+  --network-security-group infra-node-nsg \
+  --lb-name ocpRouterLB \
+  --lb-address-pools RouterBackend \
+  --internal-dns-name ocp-infra-{{ item }} \
+  --public-ip-address '' \
+  --private-ip-address {{ infra_nodes_custom_props[item -1].static_ip }}"
+  loop: "{{ infra_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - vnet_customer_managed | default(false) | bool
+    - infra_nodes_custom_props | length == infra_nodes | length
+
+- name: Azure | Manage Node  Nics (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-app-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
@@ -664,8 +764,27 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
+  when: not vnet_customer_managed | default(false) | bool
 
-- name: Azure | Manage CNS Nics
+- name: Azure | Manage Node  Nics (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-app-{{ item }}VMNic \
+  --subnet {{ vnet_customer_managed_app_subnet_id }} \
+  --network-security-group node-nsg \
+  --internal-dns-name ocp-app-{{ item }} \
+  --public-ip-address '' \
+  --private-ip-address {{ app_nodes_custom_props[item -1].static_ip }}"
+  loop: "{{ app_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - vnet_customer_managed | default(false) | bool
+    - app_nodes_custom_props | length == app_nodes | length
+
+- name: Azure | Manage CNS Nics (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name ocp-cns-{{ item }}VMNic \
   --vnet-name {{ vnet_name }} \
@@ -681,13 +800,35 @@
   changed_when: false
   when:
     - deploy_cns | default(true) | bool
-    - not  deploy_cns_on_infra | default(false) | bool
+    - not deploy_cns_on_infra | default(false) | bool
+    - not vnet_customer_managed | default(false) | bool
 
-- name: Azure | Manage public Bastion Nic
+- name: Azure | Manage CNS Nics (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-cns-{{ item }}VMNic \
+  --subnet {{ vnet_customer_managed_cns_subnet_id }} \
+  --network-security-group cns-nsg \
+  --internal-dns-name ocp-cns-{{ item }} \
+  --public-ip-address '' \
+  --private-ip-address {{ cns_nodes_custom_props[item -1].static_ip }}"
+  loop: "{{ cns_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - deploy_cns | default(true) | bool
+    - not  deploy_cns_on_infra | default(false) | bool
+    - vnet_customer_managed | default(false) | bool
+    - cns_nodes_custom_props | length == cns_nodes | length
+
+
+- name: Azure | Manage public Bastion Nic (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet master_subnet \
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP "
   register: nic
@@ -695,16 +836,34 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: bastion_private_ip is not defined
+  when:
+    - bastion_private_ip is not defined
+    - not vnet_customer_managed | default(false) | bool
+
+- name: Azure | Manage public Bastion Nic (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
+  --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP "
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - bastion_private_ip is not defined
+    - vnet_customer_managed | default(false) | bool
+
 
 # The "--public-ip-address" parameter can be removed if the host on
 # which the deploy.yml playbook runs can connect to the private
 # bastion IP address.
-- name: Azure | Manage public/private Bastion Nic
+- name: Azure | Manage public/private Bastion Nic (Ansible Managed)
   shell: " az network nic create  --resource-group {{ rg }} \
   --name bastion-VMNic \
-  --vnet-name {{ vnet_name }} \
-  --subnet master_subnet \
+  --vnet-name {{ vnet_name }}
+  --subnet master_subnet
   --network-security-group bastion-nsg \
   --public-ip-address bastionExternalIP \
   --private-ip-address {{ bastion_private_ip }} "
@@ -713,7 +872,27 @@
     - "'InternalDnsName' not in nic.stderr"
     - "nic.rc != 0"
   changed_when: false
-  when: bastion_private_ip is defined
+  when:
+    - bastion_private_ip is defined
+    - not vnet_customer_managed | default(false) | bool
+
+
+- name: Azure | Manage public/private Bastion Nic (Customer Managed)
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name bastion-VMNic \
+  --subnet {{ vnet_customer_managed_master_subnet_id if vnet_customer_managed | default(false) | bool else 'master_subnet' }}
+  --network-security-group bastion-nsg \
+  --public-ip-address bastionExternalIP \
+  --private-ip-address {{ bastion_private_ip }} "
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+  when:
+    - bastion_private_ip is defined
+    - vnet_customer_managed | default(false) | bool
+
 
 # Create VMs
 #
@@ -734,7 +913,7 @@
     --storage-sku Standard_LRS
     --data-disk-sizes 32 32 32
     --nics ocp-master-{{ item }}VMNic
-    --image RedHat:RHEL:7-RAW:latest
+    --image {{ vm_image_id_or_urn }}
     --admin-username {{ admin_user }}
     --authentication-type ssh
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
@@ -762,7 +941,7 @@
     --storage-sku Standard_LRS
     --data-disk-sizes 64 32 {{ infra_cns_size | default('') }}
     --nics ocp-infra-{{ item }}VMNic
-    --image RedHat:RHEL:7-RAW:latest
+    --image {{ vm_image_id_or_urn }}
     --admin-username {{ admin_user }}
     --authentication-type ssh
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
@@ -783,7 +962,7 @@
     --storage-sku Standard_LRS
     --data-disk-sizes 64 32
     --nics ocp-app-{{ item }}VMNic
-    --image RedHat:RHEL:7-RAW:latest
+    --image {{ vm_image_id_or_urn }}
     --admin-username {{ admin_user }}
     --authentication-type ssh
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
@@ -805,7 +984,7 @@
     --storage-sku Standard_LRS
     --data-disk-sizes 64 32 512
     --nics ocp-cns-{{ item }}VMNic
-    --image RedHat:RHEL:7-RAW:latest
+    --image {{ vm_image_id_or_urn }}
     --admin-username {{ admin_user }}
     --authentication-type ssh
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
@@ -824,7 +1003,7 @@
     --size {{ vm_size_bastion }}
     --storage-sku Standard_LRS
     --nics bastion-VMNic
-    --image RedHat:RHEL:7-RAW:latest
+    --image {{ vm_image_id_or_urn }}
     --admin-username {{ admin_user }}
     --authentication-type ssh
     --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
@@ -863,6 +1042,8 @@
     retries: 30
     delay: 60
     until: vm_list.stdout_lines | map("regex_search", "ocp-cns-[0-9]+") | select("string") | list | length == cns_nodes | length
+  when:
+    - deploy_cns | default(true) | bool
 
 - name: Azure | Wait for bastion VM creation
   command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv

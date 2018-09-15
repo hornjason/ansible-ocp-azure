@@ -5,13 +5,33 @@ location: eastus
 rg: "test"
 
 #######################
-# nodes 
+# nodes
 #######################
 master_nodes: [1,2,3]
 infra_nodes:  [1,2,3]
 app_nodes:    [1,2,3]
 # Min of 3 required and add odd nums only for CNS
 cns_nodes:    [1,2,3]
+
+# If this is set, you can customize some static values for the VM Creation task,
+# make sure to keep the same amount of array items otherwise these definitions
+# will not be applied
+master_nodes_custom_props:
+  - static_ip: 10.70.0.31
+  - static_ip: 10.70.0.32
+  - static_ip: 10.70.0.33
+infra_nodes_custom_props:
+  - static_ip: 10.70.0.35
+  - static_ip: 10.70.0.36
+  - static_ip: 10.70.0.37
+app_nodes_custom_props:
+  - static_ip: 10.70.0.40
+  - static_ip: 10.70.0.41
+  - static_ip: 10.70.0.42
+cns_nodes_custom_props:
+  - static_ip: 10.70.0.40
+  - static_ip: 10.70.0.41
+  - static_ip: 10.70.0.42
 
 #######################
 # vm sizes (adapt)
@@ -23,6 +43,11 @@ vm_size_infra:  Standard_D4s_v3
 vm_size_node:   Standard_D2s_v3
 vm_size_cns:    Standard_D8s_v3
 vm_size_bastion: Standard_D1
+
+# This can be a pay-as-you-go image ie.
+#   vm_image_id_or_urn: "RedHat:RHEL:7-RAW:latest"
+# or a valid URN like "/subscriptions/abcdef1234-5432-f4k3-id123123123/resourceGroups/ocp-cloud-rhel-image/providers/Microsoft.Compute/images/rhel-server-7.5.1"
+vm_image_id_or_urn: "RedHat:RHEL:7-RAW:latest"
 
 #######################
 # SSH user for all VMs created
@@ -39,15 +64,16 @@ admin_privkey: '~/.ssh/id_rsa'
 #  user2: 'ssh-rsa FDLKJDFLDKJDFLDKJ'
 
 #######################
-# Service Principal 
+# Service Principal
 #######################
 # This is used to template the cloud config file on each node for azure
 sp_name: devops
 # Place this in vars file that can be encrypted in root of play and not checked into SCM
 sp_secret: 'password'
 #sp_app_id: 'dfdffdfa0103'
+
 #######################
-# RHSM 
+# RHSM
 # Username / Password or
 # Activation key / OrgId
 #######################
@@ -59,7 +85,9 @@ rhsm_org: ""
 # or keep the same if only using one pool
 rhsm_broker_pool: ""
 rhsm_node_pool: ""
-rhsm_repos: 
+# For openshift contakiner Storage
+rhsm_ocs_pool: ""
+rhsm_repos:
   - rhel-7-server-rpms
   - rhel-7-server-extras-rpms
   - rhel-7-server-ose-3.9-rpms
@@ -76,6 +104,27 @@ bastion_pkgs:
 #######################
 # Network
 #######################
+
+# If this is true, it won't touch the current customer network configuration,
+# leaving this task to the Azure administrator; Otherwise this playbook run will
+# create, update or delete (as the azure_rm_virtualnetwork module works)
+vnet_customer_managed: true
+vnet_customer_managed_master_subnet: "customer-created-subnet"
+vnet_customer_managed_infra_subnet: "customer-created-subnet"
+vnet_customer_managed_app_subnet: "customer-created-subnet"
+vnet_customer_managed_cns_subnet: "customer-created-subnet"
+
+# If this is set, it will force the dhclient to use it as domain in
+# It will overwrite the domain reddog.ms.com to {{vnet_customer_dns_domain}}
+# at /etc/resolv.conf. Otherwise
+vnet_customer_dns_domain: "dirtrab.cl"
+
+# this must be set if vnet_customer_managed is true, this will be used to
+# determine azure id of managed vnet and subnets (this can be a
+# different resource group)
+vnet_customer_managed_resource_group: 4Network
+
+# vnet_customer_managed: false
 vnet_name: "{{ rg }}vnet"
 vnet_cidr: "192.168.0.0/16"
 master_subnet_cidr: "192.168.0.0/27"
@@ -107,22 +156,35 @@ vnet_preserve: false
 #######################
 # LB
 #######################
-# Name of Master LB public IP address
-master_lb_public_ip: "masterExternalLB"
-#master_lb_external_dns: "ocp.example.com"
-
+# DNS name for the master load balancer. If not set,
+# {{ rg }}.{{ location }}.cloudapp.azure.com will be used.
+#master_lb_dns: "ocp.example.com"
 
 # If this is set, the master load balancer will be configured as an
 # internal Azure load balancer with the given IP address as its
 # frontend IP address. There will be no public IP address assigned to
 # the load balancer. This is useful in environments where the VNet is
 # accessible from a private network.
-# Both need to be enabled.
+#
+# If this is set, the master_lb_dns parameter also needs to be defined
+# and point to this IP address in DNS.
 #master_lb_private_ip: 192.168.0.21
-#master_lb_private_dns: ocp-console.example.com
 
-# Name of Router LB
-router_lb_public_ip: "routerExternalLB"
+# If this is set, Azure creates a DNS record for the public router IP
+# address. The public router IP will change if the environment is
+# deleted and redeployed, but the DNS name will stay the same.
+#
+# This can be referenced in a CNAME record in an external DNS
+# server. The full DNS name is:
+#
+# {{ router_lb_dns_label }}.{{ location }}.cloudapp.azure.com
+#
+#router_lb_dns_label: ocpapplb1
+
+# If this is set, application routes use this domain by default
+# instead of nip.io. This usually requires router_lb_dns_label to be
+# set, and a wildcard DNS entry to exist for *.app.example.com.
+#router_lb_default_subdomain: app.example.com
 
 # If this is set, Azure creates a DNS record for the public router IP
 # address. The public router IP will change if the environment is
@@ -145,6 +207,20 @@ router_lb_public_ip: "routerExternalLB"
 registry_storage_account: "{{ rg | regex_replace('-') }}"
 
 
+###########################
+# DNS
+###########################
+
+# Optional dictionary of DNS domains and nameservers to configure on
+# the bastion and each node. DNS lookups for the given domains will be
+# done against the given nameservers. This can be used in environments
+# where a peering agreement or Express Route exists for the given
+# resource group
+#
+#dns_domain_nameservers:
+#  internal.example.com: 192.168.100.1
+
+
 #######################
 # Custom Named Certs
 #######################
@@ -162,7 +238,7 @@ registry_storage_account: "{{ rg | regex_replace('-') }}"
 openshift_master_htpasswd_users: {'admin': '$apr1$zAhyA9Ko$rBxBOwAwwtRuuaw8OtCwH0'}
 openshift_master_identity_providers: [{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
 
-# 
+#
 #ocp_admin_passwd: 'redhat'
 
 #######################
@@ -187,7 +263,7 @@ prometheus_volume_size: '20Gi'
 
 #######################
 #######################
-# Don't change 
+# Don't change
 #######################
 #######################
 bastion: "{{ rg }}b.{{ location }}.cloudapp.azure.com"

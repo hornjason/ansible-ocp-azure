@@ -21,7 +21,6 @@
         - cp vars.yml.example vars.yml
         Edit vars.yml
         - vi vars.yml
-
   tasks:
     - name: Setup | Disable RHSM repositories 
       rhsm_repository: 

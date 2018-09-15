@@ -33,7 +33,6 @@ openshift_hosted_router_replicas={{ infra_nodes | length }}
 openshift_hosted_registry_replicas={{ infra_nodes | length }}
 openshift_master_cluster_method=native
 
-
 openshift_cloudprovider_kind=azure
 {% if sp_app is defined %}
 openshift_cloudprovider_azure_client_id="{{ sp_app.stdout }}"
@@ -54,6 +53,7 @@ openshift_cloudprovider_azure_availability_set_name='ocp-app-instances'
 openshift_master_cluster_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 openshift_master_cluster_public_hostname={{ rg }}.{{ location }}.cloudapp.azure.com
 {% elif master_lb_dns is defined  %}
+
 openshift_master_cluster_hostname={{ master_lb_dns }}
 openshift_master_cluster_public_hostname={{ master_lb_dns }}
 {% else %}
@@ -170,7 +170,7 @@ openshift_hosted_prometheus_deploy=False
 {% endif %}
 
 # grafana
-{% if deploy_prometheus | default(true) | bool %}
+{% if deploy_grafan | default(true) | bool %}
 openshift_grafana_state=present
 openshift_grafana_node_exporter=true
 openshift_grafana_storage_type=pvc

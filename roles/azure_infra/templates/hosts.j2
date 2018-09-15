@@ -175,6 +175,9 @@ openshift_grafana_state=present
 openshift_grafana_node_exporter=true
 openshift_grafana_storage_type=pvc
 openshift_grafana_storage_class='glusterfs-registry-block'
+openshift_grafana_prometheus_namespace='openshift-metrics'
+openshift_grafana_prometheus_serviceaccount='prometheus'
+openshift_grafana_prometheus_route='prometheus'
 {% else %}
 openshift_grafana_state=absent
 {% endif %}

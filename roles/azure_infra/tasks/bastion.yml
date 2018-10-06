@@ -11,7 +11,7 @@
 # The Azure VMs are provisioned asynchronously. It can take some time
 # until they are reachable via SSH, even after Azure reports that the
 # provisioning state is "Succeeded".
-- name: Wait for nodes to become reachable via SSH
+- name: Wait for bastion to become reachable via SSH
   wait_for_connection:
     sleep: 30
     timeout: 1200

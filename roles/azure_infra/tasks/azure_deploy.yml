@@ -897,11 +897,17 @@
     dest: hosts
     backup: yes
 
+- name: Azure | SSH config file exists
+  stat:
+    path: ~/.ssh/config
+  register: sshconfig
+
 - name: Azure | SSH config file exists with proper permissions
   file:
     state: touch
     path: ~/.ssh/config
     mode: 0600
+  when: sshconfig.stat.exists == false
 
 - name: Azure | update SSH proxy config
   blockinfile:

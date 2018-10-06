@@ -66,6 +66,13 @@
       pip:
         name: ansible[azure]
 
+    - name: add private key in ansible.cfg
+      ini_file:
+        path: "{{ playbook_dir }}/ansible.cfg"
+        section: defaults
+        option: private_key_file
+        value: "{{ admin_privkey }}"
+
     - name: Setup | Prompt
       debug:
         msg: "{{ message.split('\n') }}"

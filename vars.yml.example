@@ -88,7 +88,7 @@ vnet_cidr: "192.168.0.0/16"
 master_subnet_cidr: "192.168.0.0/27"
 infra_subnet_cidr: "192.168.0.32/27"
 cns_subnet_cidr: "192.168.0.64/27"
-app_subnet_cidr: "192.168.0.128/25"
+app_subnet_cidr: "192.168.0.128/27"
 
 api_port: 443
 
@@ -189,6 +189,7 @@ deploy_cns: true
 deploy_metrics: true
 deploy_logging: true
 deploy_prometheus: true
+deploy_grafana: true
 
 # volume sizing defaults
 metrics_volume_size: 25

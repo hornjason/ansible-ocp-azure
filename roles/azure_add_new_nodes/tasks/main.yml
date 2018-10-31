@@ -1,0 +1,266 @@
+---
+# tasks file for azure_add_new_nodes
+
+# Public IPS
+- name: Azure | Manage Master Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: masterPublicIP
+    domain_name_label: "{{ rg }}"
+    allocation_method: Static
+  register: master_lb_ip
+  when: master_lb_private_ip is not defined
+
+# The two set_fact tasks have to be inside the blocks, they cannot be
+# merged. The router_lb_ip register variable is set (and overwritten)
+# even when the "when" condition is false.
+- block:
+    - name: Azure | Manage Router Public IP without DNS label
+      azure_rm_publicipaddress:
+        resource_group: "{{ rg }}"
+        state: "{{ state }}"
+        name: routerPublicIP
+        allocation_method: Static
+      register: router_lb_ip1
+
+    - set_fact:
+        router_lb_ip: "{{ router_lb_ip1.state.ip_address }}"
+  when: router_lb_dns_label is not defined
+
+- block:
+    - name: Azure | Manage Router Public IP with DNS label
+      azure_rm_publicipaddress:
+        resource_group: "{{ rg }}"
+        state: "{{ state }}"
+        name: routerPublicIP
+        allocation_method: Static
+        domain_name_label: "{{ router_lb_dns_label }}"
+      register: router_lb_ip2
+
+    - set_fact:
+        router_lb_ip: "{{ router_lb_ip2.state.ip_address }}"
+  when: router_lb_dns_label is defined
+
+# Makes this idompotent,  will fail normally since
+# domain_name_label is attached to bastion-VMNic
+- name: Azure | Check for existing BastionFQDN
+  shell: az network public-ip show -n bastionExternalIP -g {{ rg }}  --query dnsSettings.fqdn
+  register: bastion_fqdn
+  ignore_errors: true
+
+- name: Azure | Manage Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    name: bastionExternalIP
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+  register: bastion_public_ip
+  when: bastion_fqdn.stdout == ''
+
+- name: Azure | Manage Bastion Public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ rg }}"
+    state: "{{ state }}"
+    name: bastionExternalIP
+    domain_name_label: "{{ rg }}b"
+    allocation_method: Static
+  register: bastion_public_ip
+
+# create VM Nics
+# Lacks ability for adding Nics to backend pool of LB
+# https://github.com/ansible/ansible/issues/37734
+#- name: Azure | Manage VM Nics
+#  azure_rm_networkinterface:
+  #  name: "{{ item.name }}"
+  #  resource_group: "{{ rg }}"
+  #  virtual_network_name: "{{ vnet_name }}"
+  #  subnet_name: "{{ item.subnet }}"
+  #  security_group_name: "{{ }}"
+  #  public_ip: false
+
+- name: Azure | Manage Master Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-master-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet master_subnet \
+  --network-security-group master-nsg \
+  --lb-name ocpMasterLB \
+  --lb-address-pools masterAPIBackend \
+  --internal-dns-name ocp-master-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ new_master_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+
+- name: Azure | Manage Infra Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-infra-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet infra_subnet \
+  --network-security-group infra-node-nsg \
+  --lb-name ocpRouterLB \
+  --lb-address-pools RouterBackend \
+  --internal-dns-name ocp-infra-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ new_infra_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+
+- name: Azure | Manage Node  Nics
+  shell: " az network nic create  --resource-group {{ rg }} \
+  --name ocp-app-{{ item }}VMNic \
+  --vnet-name {{ vnet_name }} \
+  --subnet app_subnet \
+  --network-security-group node-nsg \
+  --internal-dns-name ocp-app-{{ item }} \
+  --public-ip-address '' "
+  loop: "{{ new_app_nodes }}"
+  register: nic
+  failed_when:
+    - "'InternalDnsName' not in nic.stderr"
+    - "nic.rc != 0"
+  changed_when: false
+
+# Create VMs
+#
+# We use the CLI option "--no-wait" to create all VMs in parallel, and
+# then wait in an Ansible loop until all of them exist.
+
+# Data disks:
+# 32 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+# 32 GB ETCD
+- name: Azure | Schedule Master VM scaling
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-master-instances
+    --name ocp-master-{{ item }}
+    --size {{ vm_size_master }}
+    --storage-sku Standard_LRS
+    --data-disk-sizes 32 32 32
+    --nics ocp-master-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ new_master_nodes }}"
+  when: new_master_nodes|length > 0
+
+- set_fact:
+    infra_cns_size: 512
+  when:
+    - deploy_cns | default(true) | bool
+    - deploy_cns_on_infra | default(false) | bool
+
+# Data disks:
+# 64 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+# 512 GB Gluster brick (optional)
+- name: Azure | Schedule Infra VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-infra-instances
+    --name ocp-infra-{{ item }}
+    --size {{ vm_size_infra }}
+    --storage-sku Standard_LRS
+    --data-disk-sizes 64 32 {{ ocs_infra_cluster_usable_storage | default('') }}
+    --nics ocp-infra-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ new_infra_nodes }}"
+  when: new_infra_nodes|length > 0
+
+
+# Data disks:
+# 64 GB Container Storage for emptydir, /var/lib/origin
+# 32 GB Docker VG
+- name: Azure | Schedule App VM creation
+  command: >
+    az vm create
+    --resource-group {{ rg }}
+    --availability-set ocp-app-instances
+    --name ocp-app-{{ item }}
+    --size {{ vm_size_node }}
+    --storage-sku Standard_LRS
+    --data-disk-sizes 64 32 {{ ocs_app_cluster_usable_storage if (infra_nodes|length + new_app_nodes|length >= 6) else '' }}
+    --nics ocp-app-{{ item }}VMNic
+    --image RedHat:RHEL:7-RAW:latest
+    --admin-username {{ admin_user }}
+    --authentication-type ssh
+    --ssh-dest-key-path /home/{{ admin_user }}/.ssh/authorized_keys
+    --ssh-key-value "{{ admin_pubkey }}"
+    --no-wait
+  loop: "{{ new_app_nodes }}"
+  when: new_app_nodes|length > 0
+
+# Master VMs
+- name: Azure | Wait for master VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-master-[0-9]+") | select("string") | list
+  when: new_master_nodes|length > 0
+
+# Infra VMs
+- name: Azure | Wait for infra VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-infra-[0-9]+") | select("string") | list
+  when:  new_infra_nodes|length > 0
+
+# App Vms
+- name: Azure | Wait for app VM creation
+  command: az vm list -g "{{ rg }}" --query "[?provisioningState=='Succeeded'].name" -o tsv
+  register: vm_list
+  retries: 30
+  delay: 60
+  until: vm_list.stdout_lines | map("regex_search", "ocp-app-[0-9]+") | select("string") | list
+  when:  new_app_nodes|length > 0
+
+# Registry
+- name: Azure | Manage Registry Storage Account
+  azure_rm_storageaccount:
+    resource_group: "{{ rg }}"
+    name: "{{ registry_storage_account }}"
+    state: "{{ state }}"
+    location: "{{ location }}"
+    account_type: Standard_LRS
+- shell: az storage account keys list --account-name "{{ registry_storage_account }}" \
+        --resource-group "{{ rg }}" --query "[?keyName == 'key1'].value" -o tsv
+  register: key
+
+- set_fact:
+    registry_storage_account_key: "{{ key.stdout }}"
+
+- name: Azure | SSH config file exists
+  stat:
+    path: ~/.ssh/config
+  register: sshconfig
+
+- name: Azure | SSH config file exists with proper permissions
+  file:
+    state: touch
+    path: ~/.ssh/config
+    mode: 0600
+  when: sshconfig.stat.exists == false
+
+- name: Refresh inventory to ensure new instaces exist in inventory
+  meta: refresh_inventory

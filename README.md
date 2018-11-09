@@ -17,7 +17,7 @@ Master Nodes | ocp-master-# | 3 | Standard_D4s_v3 | 4 | 16
 Infra Nodes | ocp-infra-# | 3 | Standard_D4s_v3 | 4 | 16   
 App Nodes | ocp-app-# | 3 | Standard_D2S_v3 | 2 | 8  
 Bastion | bastion | 1 | Standard_D1 | 1 | 3.5
-Total | | 13 | | 55 | 219.5Gb 
+Total | | 10 | | 31 | 123.5Gb 
 
 
 VM sizes can be configured from defaults by changing the following variables, if the sizes chosen are below minimum OpenShift requirements deployment checks will fail.

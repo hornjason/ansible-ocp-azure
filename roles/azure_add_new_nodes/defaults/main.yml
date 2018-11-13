@@ -1,0 +1,6 @@
+---
+# defaults file for azure_add_new_nodes
+
+new_master_nodes: []
+new_infra_nodes: []
+new_app_nodes: []

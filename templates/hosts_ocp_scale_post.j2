@@ -27,8 +27,8 @@ openshift_storageclass_default=False
 
 ansible_ssh_user="{{ admin_user }}"
 ansible_become=true
-openshift_master_api_port=443
-openshift_master_console_port=443
+openshift_master_api_port={{ api_port }}
+openshift_master_console_port={{ api_port }}
 openshift_hosted_router_replicas={{ infra_nodes | length }}
 openshift_hosted_registry_replicas={{ infra_nodes | length }}
 openshift_master_cluster_method=native

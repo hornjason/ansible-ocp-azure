@@ -1,28 +1,28 @@
 ---
 - name: Azure | Remove rh-cloud.repo
-  file: 
-    path: /etc/yum.repos.d/rh-cloud.repo 
+  file:
+    path: /etc/yum.repos.d/rh-cloud.repo
     state: absent
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | Remove yum rhui load balancers
-  file: 
-    path: /etc/yum.repos.d/rhui-load-balancers 
+  file:
+    path: /etc/yum.repos.d/rhui-load-balancers
     state: absent
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | Remove RHEL7 package
-  yum: 
-    name: RHEL7 
+  yum:
+    name: RHEL7
     state: absent
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | RHSM increase timeout
   lineinfile:
     dest: /etc/rhsm/rhsm.conf
     line: 'server_timeout=600'
     insertafter: '^proxy_password ='
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | RHSM unregister
   redhat_subscription:
@@ -31,7 +31,7 @@
   until: task_result is success
   retries: 10
   delay: 30
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | RHSM register (username-passwd) Master-Infra-CNS
   redhat_subscription:
@@ -43,14 +43,14 @@
   until: task_result is success
   retries: 10
   delay: 30
-  when: 
+  when:
     - ( inventory_hostname in groups.masters ) or
-      ( inventory_hostname in groups.infra ) or 
+      ( inventory_hostname in groups.infra ) or
       ( inventory_hostname in groups.glusterfs )
     - rhsm_user is defined and rhsm_user != ""
     - rhsm_pass is defined and rhsm_pass != ""
 
-- name: Azure | RHSM register (activation-key) Master-Infra-CNS 
+- name: Azure | RHSM register (activation-key) Master-Infra-CNS
   redhat_subscription:
     state: present
     activationkey: "{{ rhsm_key }}"
@@ -60,9 +60,9 @@
   until: task_result is success
   retries: 10
   delay: 30
-  when: 
+  when:
     - ( inventory_hostname in groups.masters ) or
-      ( inventory_hostname in groups.infra )   or 
+      ( inventory_hostname in groups.infra )   or
       ( inventory_hostname in groups.glusterfs )
     - rhsm_key is defined and rhsm_key != ""
     - rhsm_org is defined and rhsm_org != ""
@@ -71,13 +71,13 @@
   redhat_subscription:
     state: absent
     pool_ids: "{{ rhsm_node_pool }}"
-  when: 
+  when:
     - ( inventory_hostname in groups.masters ) or
-      ( inventory_hostname in groups.infra )   or 
+      ( inventory_hostname in groups.infra )   or
       ( inventory_hostname in groups.glusterfs )
     - rhsm_node_pool != rhsm_broker_pool
 
-- name: Azure | RHSM register (username-passwd) Application nodes 
+- name: Azure | RHSM register (username-passwd) Application nodes
   redhat_subscription:
     state: present
     username: "{{ rhsm_user }}"
@@ -88,14 +88,14 @@
   until: task_result is success
   retries: 10
   delay: 30
-  when: 
-    - inventory_hostname not in groups.masters 
-    - inventory_hostname not in groups.infra 
+  when:
+    - inventory_hostname not in groups.masters
+    - inventory_hostname not in groups.infra
     - inventory_hostname not in groups.glusterfs
     - rhsm_user is defined and rhsm_user != ""
     - rhsm_pass is defined and rhsm_pass != ""
 
-- name: Azure | RHSM register (activation-key) Application nodes 
+- name: Azure | RHSM register (activation-key) Application nodes
   redhat_subscription:
     state: present
     activationkey: "{{ rhsm_key }}"
@@ -107,8 +107,8 @@
   retries: 10
   delay: 30
   when:
-    - inventory_hostname not in groups.masters 
-    - inventory_hostname not in groups.infra 
+    - inventory_hostname not in groups.masters
+    - inventory_hostname not in groups.infra
     - inventory_hostname not in groups.glusterfs
     - rhsm_key is defined and rhsm_key != ""
     - rhsm_org is defined and rhsm_org != ""
@@ -121,7 +121,7 @@
   until: repo_result is success
   retries: 10
   delay: 30
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | RHSM enable repos for OCP
   rhsm_repository:
@@ -132,7 +132,7 @@
   retries: 10
   delay: 30
   register: repo_result
-  when: "'nodes' in group_names"
+  when: ('nodes' in group_names) or ('new_nodes' in group_names)
 
 - name: Azure | Install OCP client
   yum:
